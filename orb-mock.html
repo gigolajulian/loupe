@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ORB Dotted Mock</title>
+<style>
+  :root { --tile: #151517; --fg: #ececec; --dim: #8b8b91; --faint: #4e4e54; --accent: #5fc3d3;
+          --sans: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif; --mono: "Cascadia Mono", Consolas, monospace; }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: #070708; color: var(--fg); font: 13px/1.4 var(--sans); padding: 32px 16px 80px; }
+  .frame { max-width: 1000px; margin: 0 auto 36px; }
+  .label { color: var(--faint); font: 12px var(--mono); margin-bottom: 8px; }
+  .label b { color: var(--fg); font-weight: 400; }
+  .desk { position: relative; height: 150px; border-radius: 6px; overflow: hidden;
+          background: radial-gradient(120% 90% at 80% 120%, #1d2430 0%, #0f1116 45%, #0a0a0c 100%); }
+  .desk.tall { height: 300px; }
+  .island { position: absolute; top: 0; left: 50%; transform: translateX(-50%); background: #000;
+            border-radius: 0 0 18px 18px; padding: 6px 16px; display: flex; align-items: center; gap: 10px; }
+  .island.open { border-radius: 0 0 22px 22px; padding: 12px 14px 14px; align-items: stretch; }
+  .mark { background: var(--tile); border-radius: 14px; width: 104px; display: grid; place-items: center; }
+  .list { display: grid; gap: 2px; width: 300px; align-content: start; }
+  .r { display: flex; align-items: baseline; gap: 10px; padding: 7px 10px; border-radius: 10px; }
+  .r .n { flex: 1; font-weight: 600; font-size: 12.5px; }
+  .r .v { color: var(--dim); font: 11px var(--mono); }
+  .r.need { background: #0f1517; }
+  .r.need .v { color: var(--accent); }
+  .r.quiet .n, .r.quiet .v { color: var(--faint); }
+  .card { width: 360px; display: flex; flex-direction: column; gap: 10px; }
+  .who { font-weight: 600; font-size: 12.5px; }
+  .code { font: 12px/1.6 var(--mono); background: #0a0a0b; border-radius: 8px; padding: 8px 10px; }
+  .btns { display: flex; gap: 6px; }
+  .btn { font: 600 12px var(--sans); color: var(--fg); background: #1c1c1f; border: 0; border-radius: 9px; padding: 8px 0; flex: 1; }
+  .btn.pri { background: var(--accent); color: #031013; }
+  .legend { display: flex; gap: 30px; flex-wrap: wrap; padding: 24px; }
+  .legend div { display: grid; justify-items: center; gap: 8px; color: var(--dim); font: 11px var(--mono); text-align: center; }
+  .legend i { font-style: normal; color: var(--faint); }
+  .cy { color: var(--fg); font: 12px var(--mono); min-width: 120px; }
+</style>
+</head>
+<body>
+
+<div class="frame">
+  <div class="label"><b>00</b> one dotted orb · the animation is what the busiest session is doing · cyan only when it needs you</div>
+  <div class="desk legend">
+    <div><canvas data-orb="breathing" data-size="64"></canvas>thinking<i>breathing</i></div>
+    <div><canvas data-orb="searching" data-size="64"></canvas>reading<i>searching</i></div>
+    <div><canvas data-orb="composing" data-size="64"></canvas>editing<i>composing</i></div>
+    <div><canvas data-orb="working" data-size="64"></canvas>running<i>working</i></div>
+    <div><canvas data-orb="listening" data-size="64" data-ink="cyan"></canvas>needs you<i>listening</i></div>
+    <div><canvas data-orb="breathing" data-size="64" data-ink="dim" data-paused="1"></canvas>idle<i>still, dim</i></div>
+  </div>
+</div>
+
+<div class="frame">
+  <div class="label"><b>01</b> collapsed · one orb, whatever the session count · cycles through the states here</div>
+  <div class="desk">
+    <div class="island"><canvas id="cycle" data-orb="breathing" data-size="20" data-px="26"></canvas><span class="cy" id="cyl">thinking</span></div>
+  </div>
+</div>
+
+<div class="frame">
+  <div class="label"><b>02</b> hover · the one orb gets big, sessions are a plain list, no orb per row</div>
+  <div class="desk tall">
+    <div class="island open">
+      <div class="mark"><canvas data-orb="composing" data-size="64" data-px="80"></canvas></div>
+      <div class="list">
+        <div class="r"><span class="n">JG WEBSITE NEW</span><span class="v">editing page.tsx</span></div>
+        <div class="r"><span class="n">SAVED</span><span class="v">thinking</span></div>
+        <div class="r quiet"><span class="n">CONTENT COMMAND CENTER</span><span class="v">done</span></div>
+        <div class="r quiet"><span class="n">PLCBO</span><span class="v">idle</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="frame">
+  <div class="label"><b>03</b> needs you · orb turns cyan and listens, the card replaces the list</div>
+  <div class="desk tall">
+    <div class="island open">
+      <div class="mark"><canvas data-orb="listening" data-size="64" data-px="80" data-ink="cyan"></canvas></div>
+      <div class="card">
+        <div class="who">PLCBO</div>
+        <div class="code">npx wrangler deploy --env production</div>
+        <div class="btns"><button class="btn pri">Allow</button><button class="btn">Deny</button><button class="btn">Always</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { resolvePreset, MODE_FRAMES } from './node_modules/thinking-orbs/dist/engine.es.js';
+
+  const INK = { white: [236, 236, 236], cyan: [95, 195, 211], dim: [90, 90, 96] };
+  const dpr = Math.min(2, devicePixelRatio || 1);
+  const t0 = performance.now();
+
+  function setup(c) {
+    const size = +c.dataset.size, px = +(c.dataset.px || size);
+    c.width = c.height = px * dpr; c.style.width = c.style.height = px + 'px';
+    c._ctx = c.getContext('2d');
+    c._k = (px * dpr) / size;
+  }
+
+  // engine gives z-sorted dots with `white` = paper ink; on dark we mirror it so near dots read bright
+  function draw(c, t) {
+    const { mode, speed, opts } = resolvePreset(c.dataset.orb, +c.dataset.size);
+    const f = MODE_FRAMES[mode](+c.dataset.size, (c.dataset.paused ? 2 : t) * speed, opts);
+    const [r, g, b] = INK[c.dataset.ink || 'white'];
+    const ctx = c._ctx; ctx.setTransform(c._k, 0, 0, c._k, 0, 0); ctx.clearRect(0, 0, 999, 999);
+    for (const l of f.lines || []) {
+      ctx.strokeStyle = `rgba(${r},${g},${b},${(1 - l.white) * (l.a ?? 1)})`; ctx.lineWidth = l.w;
+      ctx.beginPath(); ctx.moveTo(l.x1, l.y1); ctx.lineTo(l.x2, l.y2); ctx.stroke();
+    }
+    for (const d of f.dots) {
+      ctx.fillStyle = `rgba(${r},${g},${b},${(1 - d.white) * (d.a ?? 1)})`;
+      ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  const all = [...document.querySelectorAll('canvas[data-orb]')];
+  all.forEach(setup);
+
+  const SEQ = [['breathing', 'thinking'], ['searching', 'reading'], ['composing', 'editing'], ['working', 'running'], ['listening', 'needs you', 'cyan']];
+  let k = 0; const cyc = document.getElementById('cycle'), cyl = document.getElementById('cyl');
+  setInterval(() => {
+    k = (k + 1) % SEQ.length; const [o, l, ink] = SEQ[k];
+    cyc.dataset.orb = o; cyl.textContent = l; cyl.style.color = ink ? 'var(--accent)' : '';
+    if (ink) cyc.dataset.ink = ink; else delete cyc.dataset.ink;
+  }, 2600);
+
+  (function loop() { const t = (performance.now() - t0) / 1000; all.forEach(c => draw(c, t)); requestAnimationFrame(loop); })();
+</script>
+</body>
+</html>

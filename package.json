@@ -1,0 +1,78 @@
+{
+  "name": "loupe",
+  "productName": "LOUPE",
+  "version": "0.2.12",
+  "private": true,
+  "description": "Top-of-screen island for Claude Code sessions",
+  "author": "Julian Gigola",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "icons": "sh logo/export-icons.sh",
+    "dist": "electron-builder --win nsis",
+    "dist:mac": "electron-builder --mac",
+    "release": "electron-builder --win nsis --publish always"
+  },
+  "build": {
+    "appId": "com.juliangigola.loupe",
+    "productName": "LOUPE",
+    "icon": "build/icon.png",
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer.js",
+      "sessions.js",
+      "hooks.js",
+      "relay.js",
+      "index.html",
+      "icon.png",
+      "icon@2x.png",
+      "trayTemplate.png",
+      "trayTemplate@2x.png",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "category": "public.app-category.developer-tools",
+      "identity": null,
+      "extendInfo": {
+        "LSUIElement": true
+      }
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "runAfterFinish": true,
+      "shortcutName": "LOUPE"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "gigolajulian",
+      "repo": "loupe",
+      "releaseType": "release"
+    }
+  },
+  "devDependencies": {
+    "electron": "^38.8.6",
+    "electron-builder": "^26.0.12"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.11",
+    "koffi": "^3.3.3",
+    "thinking-orbs": "^0.3.1"
+  }
+}

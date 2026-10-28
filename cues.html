@@ -1,0 +1,51 @@
+<!doctype html>
+<!-- LOUPE audio cue audition. All cues are synthesized with Web Audio, no files. Pick one per event. -->
+<meta charset="utf-8">
+<title>LOUPE cues</title>
+<style>
+  body { background: #000; color: #ececec; font: 13px "Cascadia Mono", Consolas, monospace; padding: 24px; }
+  h2 { font-size: 12px; color: #8b8b91; font-weight: 400; margin: 24px 0 8px; }
+  button { background: #151517; color: #ececec; border: 1px solid #26262a; font: inherit; padding: 10px 14px; margin: 0 6px 6px 0; cursor: pointer; }
+  button:hover { border-color: #5fc3d3; }
+</style>
+<h2>needs you (permission / question)</h2>
+<div id="need"></div>
+<h2>done (session finished)</h2>
+<div id="done"></div>
+<h2>error</h2>
+<div id="err"></div>
+<script>
+const ctx = new AudioContext();
+// one note: freq Hz, start s, length s, wave, peak gain
+function note(f, at, len, type = 'sine', peak = 0.18) {
+  const t = ctx.currentTime + at, o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = type; o.frequency.value = f;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(peak, t + 0.008);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+  o.connect(g).connect(ctx.destination); o.start(t); o.stop(t + len + 0.05);
+}
+const CUES = {
+  need: {
+    'N1 glass up': () => { note(880, 0, .25); note(1320, .09, .35); },
+    'N2 soft knock': () => { note(520, 0, .12, 'triangle', .25); note(520, .14, .16, 'triangle', .2); },
+    'N3 bell': () => { note(1046, 0, .9, 'sine', .14); note(2093, 0, .5, 'sine', .04); },
+    'N4 low pulse': () => { note(330, 0, .18, 'sine', .3); note(440, .12, .3, 'sine', .22); },
+  },
+  done: {
+    'D1 tick': () => note(1760, 0, .06, 'sine', .12),
+    'D2 settle': () => { note(660, 0, .3); note(440, .1, .45); },
+    'D3 drop': () => note(392, 0, .4, 'triangle', .18),
+  },
+  err: {
+    'E1 low double': () => { note(220, 0, .15, 'triangle', .25); note(196, .17, .25, 'triangle', .25); },
+    'E2 buzz': () => note(150, 0, .25, 'square', .06),
+  },
+};
+for (const [k, set] of Object.entries(CUES))
+  for (const [name, play] of Object.entries(set)) {
+    const b = document.createElement('button');
+    b.textContent = name; b.onclick = () => { ctx.resume(); play(); };
+    document.getElementById(k).append(b);
+  }
+</script>

@@ -1,0 +1,178 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'">
+<style>
+  :root {
+    --tile: #151517; --line: #26262a; --fg: #ececec; --dim: #8b8b91; --faint: #77777e; --accent: #5fc3d3;    --sans: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { background: transparent; overflow: hidden; user-select: none; }
+  body { color: var(--fg); font: 13px/1.4 var(--sans); display: flex; justify-content: center; }
+
+  .wrap { position: relative; align-self: flex-start; margin-bottom: 30px; }
+  .wrap:has(.island.empty) { display: none; }
+  .island { overflow: hidden; border-radius: 0 0 16px 16px; padding: 6px 14px; will-change: width, height; }
+  /* the island's surface is a separate layer behind it, so it can go gooey: a see-through dark
+     glass (no desktop blur, which a transparent window can't do), lighter when idle, more solid
+     when open. The layer reaches 20px above the screen edge so the goo filter keeps the top square. */
+  .goo { position: absolute; inset: -20px 0 0 0; pointer-events: none; opacity: .58; transition: opacity .5s; }
+  .wrap:has(.idle) .goo { opacity: .34; }
+  .wrap:has(.open) .goo { opacity: .93; }
+  /* blur + alpha threshold: shapes that touch melt together. Only while the drop moves: at rest it softens the straight sides */
+  .goo-on.gooing .goo { filter: url(#goo); }
+  .goo > div { position: absolute; background: rgb(16,17,20); }
+  .goo .main { inset: 0; border-radius: 0 0 16px 16px; transition: border-radius .5s cubic-bezier(.32,.72,0,1); }
+  .wrap:has(.open) .goo .main { border-radius: 0 0 22px 22px; }
+  .goo .drop { left: 50%; top: 0; width: 30px; height: 30px; margin-left: -15px; border-radius: 50%; opacity: 0; }
+  .island .tile { background: rgba(255,255,255,.05); }
+  .island .code { background: rgba(0,0,0,.25); }
+  .island .r.go:hover { background: rgba(255,255,255,.06); }
+  .island .r.need { background: rgba(95,195,211,.10); }
+  .mini { display: flex; gap: 10px; align-items: center; }
+  .body { display: none; gap: 10px; align-items: stretch; padding: 4px 0 4px; min-height: 112px; }
+  .island.open { border-radius: 0 0 22px 22px; padding: 10px 14px 14px; }
+  .island.open .mini { display: none; }
+  .island.open .body { display: flex; }
+
+  .tile { background: var(--tile); border-radius: 14px; padding: 12px; }
+  .mark { width: 96px; display: grid; place-items: center; }
+  .island.calm .body { min-height: 0; }
+  .island.calm .mark { width: 52px; }
+  .island.calm #orb-l { width: 40px !important; height: 40px !important; }
+  .island.calm .r { grid-template-columns: 1fr auto; align-items: baseline; gap: 12px; padding-block: 4px; }
+  .island.calm .sess { gap: 0; }  canvas { display: block; }
+  .verb { font: 12px "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; color: var(--fg); max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .verb.need { color: var(--accent); }
+  .proj { font: 600 12px "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; color: var(--fg); max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .proj:empty { display: none; }
+  .proj + .verb { color: var(--dim); }
+  .proj + .verb.need { color: var(--accent); }
+  .sess { display: grid; gap: 2px; width: 400px; align-content: start; }
+  .r { display: grid; gap: 3px; min-width: 0; padding: 7px 10px; border-radius: 10px; }
+  .r .st { flex: 1; min-width: 0; color: var(--faint); font: 11px "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .r .st span { display: inline-block; max-width: 12ch; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
+  .r .st .on { color: var(--fg); }
+  .r .st .need { color: var(--accent); }
+  .r .n { flex: 0 1 auto; max-width: 170px; font-weight: 600; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .r .top { display: flex; align-items: baseline; gap: 10px; min-width: 0; }  .r .v { color: var(--dim); font: 11px "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .r.go:hover { background: #151517; }
+  .r.need { background: #0f1517; }
+  .r.need .v { color: var(--accent); }
+  .r.quiet .n, .r.quiet .v { color: var(--faint); }
+  .r.term { display: none; }
+  .sess.showterm .r.term { display: flex; }
+  .more { color: var(--faint); font-size: 11px; text-align: center; padding-top: 4px; cursor: default; }
+  .more:empty { display: none; }
+  svg.i { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; display: block; }
+
+  /* ask card: permission or question */
+  .ask { width: 400px; display: none; flex-direction: column; gap: 10px; }
+  .island.asking .ask { display: flex; }
+  .island.asking .sess { display: none; }
+  .who { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 12.5px; }
+  .who .t { color: var(--accent); display: flex; align-items: center; gap: 6px; font-weight: 400; }
+  .who .sp { flex: 1; }
+  .code { font: 12px/1.6 "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; background: #0a0a0b; border-radius: 8px; padding: 8px 10px;
+          white-space: pre-wrap; word-break: break-all; max-height: 120px; overflow: hidden; }
+  .q { font-size: 14px; font-weight: 600; }
+  /* square hairline controls; the one accent marks the default action */
+  .btns { display: flex; gap: 6px; }
+  .btn { font: 500 12px var(--sans); color: var(--fg); background: none; border: 1px solid rgba(255,255,255,.16); border-radius: 0; padding: 7px 12px; flex: 1; cursor: default; }
+  .btn:hover { border-color: rgba(255,255,255,.4); }
+  .btn.pri { color: var(--accent); border-color: var(--accent); }
+  .btn.pri:hover { background: rgba(95,195,211,.10); }
+  .btn:disabled { opacity: .35; pointer-events: none; }
+  /* question options: a numbered list, one hairline per row */
+  .opts { display: grid; border-top: 1px solid rgba(255,255,255,.1); }
+  .opt { display: flex; align-items: baseline; gap: 10px; min-width: 0; padding: 7px 2px; font: 12.5px var(--sans); color: var(--fg); text-align: left;
+         background: none; border: 0; border-bottom: 1px solid rgba(255,255,255,.1); cursor: default; }
+  .opt .k { font: 11px "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; color: var(--faint); }
+  .opt .l { font-weight: 600; white-space: nowrap; }
+  .opt .d { flex: 1; min-width: 0; color: var(--dim); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .opt .rec { font: 10px "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; color: var(--accent); }
+  .opt:hover .l, .opt:hover .k, .opt.sel .l, .opt.sel .k { color: var(--accent); }
+  .link { color: var(--faint); font-size: 11px; white-space: nowrap; display: flex; align-items: center; gap: 4px; background: none; border: 0; cursor: default; }
+  .link:hover { color: var(--dim); }
+  .wait { color: var(--faint); font-size: 11px; }
+
+  /* sound: speaker at the open panel's top right; click shows the volume slider beside it */
+  .island { position: relative; }
+  .vol { position: absolute; top: 8px; right: 12px; display: flex; flex-direction: row-reverse; align-items: center; gap: 6px; }
+  .sess, .ask { padding-top: 18px; } /* clear the speaker */
+  #volume { display: none; }
+  .vol.show #volume { display: block; }
+  .mute { background: none; border: 0; padding: 2px; color: var(--dim); display: grid; cursor: default; }
+  .mute:hover { color: var(--fg); }
+  .mute.off { color: var(--faint); }
+  #volume { -webkit-appearance: none; appearance: none; width: 58px; height: 12px; background: none; margin: 0; }
+  #volume::-webkit-slider-runnable-track { height: 1px; background: rgba(255,255,255,.22); }
+  #volume::-webkit-slider-thumb { -webkit-appearance: none; width: 8px; height: 8px; margin-top: -3.5px; background: var(--fg); border: 0; }
+
+  .mini .side { display: contents; }
+  .mini .gap { display: none; }
+  /* Mac notch (html.notch, size from main): solid notch black, square top, grows out of the notch.
+     Collapsed it is the notch itself; while a session works, orb + project sit left of it and the verb right. */
+  .notch .goo { opacity: 1 !important; }
+  .notch .goo > div { background: #000; }
+  .notch .goo .main { border-radius: 0 0 10px 10px; }
+  .notch .island { padding: 0; }
+  /* collapsed, the wings are two notch-high squares: orb left, a status dot right (cyan when a session needs you).
+     Project and verb live in the open panel, so the menu bar keeps its icons. */
+  .notch .mini { display: grid; grid-template-columns: var(--notch-h) var(--notch-w) var(--notch-h); height: var(--notch-h); gap: 0; }
+  .notch .mini .side { display: grid; place-items: center; padding: 0 0 0 4px; }
+  .notch .mini .gap { display: block; }
+  .notch .mini .proj { display: none; }
+  .notch .mini .verb { display: grid; place-items: center; padding: 0 4px 0 0; max-width: none; font-size: 0; }
+  .notch .mini .verb::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--dim); animation: beat 1.6s ease-in-out infinite; }
+  .notch .mini .verb.need::before { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+  @keyframes beat { 50% { opacity: .35; } }
+  /* the notch's concave top shoulders, so the island reads as part of the hardware */
+  .notch .goo .main::before, .notch .goo .main::after { content: ""; position: absolute; top: 20px; width: 8px; height: 8px; }
+  .notch .goo .main::before { left: -8px; background: radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px); }
+  .notch .goo .main::after { right: -8px; background: radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px); }
+  /* collapsed, no surface at all: orb and dot float on the menu bar beside the notch. Open, the panel fades in solid. */
+  .notch .wrap:not(:has(.open)) .goo { opacity: 0 !important; }
+  .notch .island:not(.open) canvas, .notch .mini .verb::before { filter: drop-shadow(0 0 2px rgba(0,0,0,.6)); }
+  .notch .island.idle .mini { grid-template-columns: var(--notch-w); }
+  .notch .island.idle .side, .notch .island.idle .verb { display: none; }
+  .notch .island.open { padding: calc(var(--notch-h) + 16px) 14px 14px; text-shadow: 0 1px 2px rgba(0,0,0,.5); }
+  .notch .vol { top: calc(var(--notch-h) + 20px); }
+  /* open, the panel drops from the top edge as glass under the menu bar, which stays readable on top.
+     The frosted material is a native vibrancy window behind this one (main.js 'glass'). */
+  .notch .goo .main { transition: border-radius .5s cubic-bezier(.32,.72,0,1), top .5s cubic-bezier(.32,.72,0,1), background-color .3s; }
+  .notch .wrap:has(.open) .goo .main { background: transparent; }
+  .notch .goo .drop { display: none; }
+  .notch .island.open { --dim: #c2c2c8; --faint: #a4a4ab; } /* lighter glass: lift the grey text */
+  .notch .wrap:has(.open) .goo .main::before, .notch .wrap:has(.open) .goo .main::after { display: none; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <filter id="goo"><feGaussianBlur stdDeviation="7"/><feColorMatrix values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 12 -5"/></filter>
+  <symbol id="read" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol>
+  <symbol id="run" viewBox="0 0 24 24"><path d="M4 17l6-6-6-6M12 19h8"/></symbol>
+  <symbol id="ask" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/></symbol>
+  <symbol id="out" viewBox="0 0 24 24"><path d="M7 17L17 7M8 7h9v9"/></symbol>
+  <symbol id="vol" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></symbol>
+  <symbol id="muted" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4zM22 9l-6 6M16 9l6 6"/></symbol>
+</svg>
+
+<div class="wrap">
+<div class="goo"><div class="main"></div><div class="drop" id="drop"></div></div>
+<div class="island empty" id="island">
+  <div class="mini"><span class="side"><canvas id="orb-s" data-size="20" data-px="26"></canvas><span class="proj" id="proj"></span></span><i class="gap"></i><span class="verb" id="verb"></span></div>
+  <div class="body">
+    <div class="mark"><canvas id="orb-l" data-size="64" data-px="80"></canvas></div>
+    <div class="vol"><button class="mute" id="mute" aria-label="Volume"><svg class="i"><use href="#vol"/></svg></button><input type="range" id="volume" min="0" max="1" step="0.05" aria-label="Volume"></div>
+    <div class="sess" id="sess"><div class="more" id="more"></div></div>
+    <div class="ask" id="card"></div>
+  </div>
+</div>
+</div>
+
+<script type="module" src="renderer.js"></script>
+</body>
+</html>

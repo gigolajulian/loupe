@@ -1,0 +1,5 @@
+node_modules/
+dist/
+dist-build/
+.claude/
+loupe.log
