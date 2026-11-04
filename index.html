@@ -26,6 +26,13 @@
   .goo .main { inset: 0; border-radius: 0 0 16px 16px; transition: border-radius .5s cubic-bezier(.32,.72,0,1); }
   .wrap:has(.open) .goo .main { border-radius: 0 0 22px 22px; }
   .goo .drop { left: 50%; top: 0; width: 30px; height: 30px; margin-left: -15px; border-radius: 50%; opacity: 0; }
+  /* html.dock: hangs from the bottom edge of the screen above the main one and grows upward. Solid, so it reads
+     over any title bar. The goo layer is flipped, so the drop rises; it reaches 20px below the screen edge instead. */
+  .dock body { align-items: flex-end; height: 100vh; }
+  .dock .wrap { align-self: flex-end; margin: 30px 0 0; }
+  .dock .island, .dock .island.open { border-radius: 16px 16px 0 0; }
+  .dock .goo, .dock .wrap:has(.idle) .goo, .dock .wrap:has(.open) .goo { inset: 0 0 -20px 0; transform: scaleY(-1); opacity: 1; }
+  .dock .goo > div { background: #050506; }
   .island .tile { background: rgba(255,255,255,.05); }
   .island .code { background: rgba(0,0,0,.25); }
   .island .r.go:hover { background: rgba(255,255,255,.06); }

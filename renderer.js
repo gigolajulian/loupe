@@ -326,6 +326,7 @@ let morph = null, fading = null, closeDelay = 300, closing = null;
 window.loupe.onConfig(c => {
   closeDelay = c.closeDelay; sound = c.sound;
   document.body.classList.toggle('goo-on', c.goo);
+  document.documentElement.classList.toggle('dock', !!c.dock);
   volEl.value = master.gain.value = c.volume;
   showSound();
 });

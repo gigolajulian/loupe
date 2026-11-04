@@ -238,9 +238,25 @@ app.whenReady().then(() => {
     app.setLoginItemSettings({ openAtLogin: true });
     cfg.loginSet = true; fs.writeFileSync(cfgPath, JSON.stringify(cfg));
   }
-  const sendCfg = () => win.webContents.send('config', cfg);
+  // where: 'top' = top of the main display, 'above' = bottom edge of the display stacked above it (falls back to 'top')
+  const place = () => {
+    const p = screen.getPrimaryDisplay().bounds;
+    const up = !MAC && cfg.where === 'above' && screen.getAllDisplays().map(x => x.bounds)
+      .find(b => b.y + b.height === p.y && b.x < p.x + p.width && b.x + b.width > p.x);
+    const d = up || p;
+    win.setBounds({ x: Math.round(d.x + (d.width - W) / 2), y: up ? d.y + d.height - H : d.y, width: W, height: H });
+    return !!up;
+  };
+  screen.on('display-added', () => { place(); sendCfg(); });
+  screen.on('display-removed', () => { place(); sendCfg(); });
+  screen.on('display-metrics-changed', () => { place(); sendCfg(); });
+  const sendCfg = () => win.webContents.send('config', { ...cfg, dock: place() });
   win.webContents.on('did-finish-load', sendCfg);
   const menu = () => tray.setContextMenu(Menu.buildFromTemplate([
+    ...(MAC ? [] : [{ label: 'Where', submenu: [['top', 'Top of main screen'], ['above', 'Bottom of the screen above']].map(([v, label]) => ({
+      label, type: 'radio', checked: (cfg.where || 'top') === v,
+      click: () => { cfg.where = v; fs.writeFileSync(cfgPath, JSON.stringify(cfg)); sendCfg(); menu(); },
+    })) }]),
     { label: 'Close after hover', submenu: [0, 150, 300, 600, 1000, 2000, 5000].map(ms => ({
       label: ms ? `${ms / 1000} s` : 'Instant', type: 'radio', checked: cfg.closeDelay === ms,
       click: () => { cfg.closeDelay = ms; fs.writeFileSync(cfgPath, JSON.stringify(cfg)); sendCfg(); menu(); },
