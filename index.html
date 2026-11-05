@@ -49,7 +49,8 @@
   .island.calm .mark { width: 52px; }
   .island.calm #orb-l { width: 40px !important; height: 40px !important; }
   .island.calm .r { grid-template-columns: 1fr auto; align-items: baseline; gap: 12px; padding-block: 4px; }
-  .island.calm .sess { gap: 0; }  canvas { display: block; }
+  .island.calm .sess { gap: 0; }
+  canvas { display: block; }
   .verb { font: 12px "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; color: var(--fg); max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .verb.need { color: var(--accent); }
   .proj { font: 600 12px "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; color: var(--fg); max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -125,27 +126,34 @@
   .notch .goo > div { background: #000; }
   .notch .goo .main { border-radius: 0 0 10px 10px; }
   .notch .island { padding: 0; }
-  /* collapsed, the wings are two notch-high squares: orb left, a status dot right (cyan when a session needs you).
-     Project and verb live in the open panel, so the menu bar keeps its icons. */
-  .notch .mini { display: grid; grid-template-columns: var(--notch-h) var(--notch-w) var(--notch-h); height: var(--notch-h); gap: 0; }
-  .notch .mini .side { display: grid; place-items: center; padding: 0 0 0 4px; }
-  .notch .mini .gap { display: block; }
-  .notch .mini .proj { display: none; }
-  .notch .mini .verb { display: grid; place-items: center; padding: 0 4px 0 0; max-width: none; font-size: 0; }
-  .notch .mini .verb::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--dim); animation: beat 1.6s ease-in-out infinite; }
-  .notch .mini .verb.need::before { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
-  @keyframes beat { 50% { opacity: .35; } }
+  /* collapsed, the ears read like menu bar items: orb + project left of the notch, the verb right of it (cyan when
+     a session needs you). Both ears are one width so the notch stays centred. Only the notch takes the hover,
+     so menu bar icons under the ears stay clickable. */
+  .notch .mini { --ear: 150px; display: grid; grid-template-columns: var(--ear) var(--notch-w) var(--ear); height: var(--notch-h); gap: 0;
+    text-shadow: 0 0 3px rgba(0,0,0,.45); }
+  .notch .mini .side { display: flex; align-items: center; justify-content: flex-end; gap: 7px; padding: 0 10px 0 0; min-width: 0; }
+  .notch .mini .gap { display: block; align-self: stretch; } /* empty, so it needs the stretch to be a hover target */
+  .notch .mini .proj { font: 600 13px system-ui, -apple-system, sans-serif; color: #fff; max-width: 112px; }
+  .notch .mini .verb { align-self: center; justify-self: start; padding: 0 0 0 10px; max-width: 110px;
+    font: 13px system-ui, -apple-system, sans-serif; color: rgba(255,255,255,.82); }
+  .notch .mini .verb.need { color: var(--accent); }
+  .notch .island:not(.open) { pointer-events: none; }
+  .notch .island:not(.open) .gap { pointer-events: auto; }
   /* the notch's concave top shoulders, so the island reads as part of the hardware */
   .notch .goo .main::before, .notch .goo .main::after { content: ""; position: absolute; top: 20px; width: 8px; height: 8px; }
   .notch .goo .main::before { left: -8px; background: radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px); }
   .notch .goo .main::after { right: -8px; background: radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px); }
-  /* collapsed, no surface at all: orb and dot float on the menu bar beside the notch. Open, the panel fades in solid. */
+  /* collapsed, no surface at all: the ears float on the menu bar beside the notch. Open, the panel fades in solid. */
   .notch .wrap:not(:has(.open)) .goo { opacity: 0 !important; }
-  .notch .island:not(.open) canvas, .notch .mini .verb::before { filter: drop-shadow(0 0 2px rgba(0,0,0,.6)); }
+  .notch .island:not(.open) canvas { filter: drop-shadow(0 0 2px rgba(0,0,0,.6)); }
   .notch .island.idle .mini { grid-template-columns: var(--notch-w); }
   .notch .island.idle .side, .notch .island.idle .verb { display: none; }
-  .notch .island.open { padding: calc(var(--notch-h) + 16px) 14px 14px; text-shadow: 0 1px 2px rgba(0,0,0,.5); }
-  .notch .vol { top: calc(var(--notch-h) + 20px); }
+  .notch .island.open { padding: calc(var(--notch-h) + 6px) 14px 10px; text-shadow: 0 1px 2px rgba(0,0,0,.5); }
+  .notch .vol { top: calc(var(--notch-h) + 8px); }
+  /* slim: no fixed panel height, a smaller orb */
+  .notch .island.open .body { min-height: 0; padding: 0; }
+  .notch .island.open:not(.calm) .mark { width: 64px; }
+  .notch .island.open:not(.calm) #orb-l { width: 52px !important; height: 52px !important; }
   /* open, the panel drops from the top edge as glass under the menu bar, which stays readable on top.
      The frosted material is a native vibrancy window behind this one (main.js 'glass'). */
   .notch .goo .main { transition: border-radius .5s cubic-bezier(.32,.72,0,1), top .5s cubic-bezier(.32,.72,0,1), background-color .3s; }

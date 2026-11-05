@@ -202,14 +202,14 @@ app.whenReady().then(() => {
     nativeTheme.themeSource = 'dark'; // LOUPE's text is light: keep the material dark in light mode too
     glass = new BrowserWindow({
       show: false, frame: false, resizable: false, movable: false, focusable: false, skipTaskbar: true, type: 'panel',
-      vibrancy: 'hud', visualEffectState: 'active', backgroundColor: '#00000000', roundedCorners: true, width: 100, height: 100,
+      vibrancy: 'hud', visualEffectState: 'active', backgroundColor: '#00000000', roundedCorners: true, hasShadow: false, width: 100, height: 100, // no shadow: it reads as part of the menu bar
       enableLargerThanScreen: true, // its top edge sits above the screen, so only the bottom corners show rounded
     });
     glass.setIgnoreMouseEvents(true);
     glass.setAlwaysOnTop(true, 'pop-up-menu'); // over the menu bar, so panel and bar read as one surface; LOUPE's own window stays above
     glass.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
     // tint: the menu bar's colour over this Mac's wallpaper (an Aerial, so there is no image to sample); LOUPE_TINT=r,g,b,a overrides
-    const tint = process.env.LOUPE_TINT || '18,44,70,.72';
+    const tint = process.env.LOUPE_TINT || '18,44,70,.45';
     glass.loadURL(`data:text/html,<style>html{background:rgba(${tint})}</style>`);
   }
   ipcMain.on('glass', (_, r) => {
@@ -266,6 +266,19 @@ app.whenReady().then(() => {
   screen.on('display-metrics-changed', () => { place(); sendCfg(); });
   const sendCfg = () => win.webContents.send('config', { ...cfg, dock: place() });
   win.webContents.on('did-finish-load', sendCfg);
+  // Mac: after sleep the panel can stop drawing while events still arrive. Reload it on wake, on unlock and if
+  // its renderer dies; the sessions live here in main, so nothing is lost.
+  if (MAC) {
+    win.webContents.on('did-finish-load', push); // a reload starts with an empty list: refill it
+    const reload = why => setTimeout(() => {
+      if (win.isDestroyed()) return;
+      if (process.env.LOUPE_SNAP) console.log('reload', new Date().toISOString(), why);
+      win.webContents.reload();
+    }, 1500);
+    win.webContents.on('render-process-gone', (_, d) => reload(`renderer ${d.reason}`));
+    powerMonitor.on('resume', () => reload('resume'));
+    powerMonitor.on('unlock-screen', () => reload('unlock'));
+  }
   const menu = () => tray.setContextMenu(Menu.buildFromTemplate([
     ...(MAC ? [] : [{ label: 'Where', submenu: [['top', 'Top of main screen'], ['above', 'Bottom of the screen above']].map(([v, label]) => ({
       label, type: 'radio', checked: (cfg.where || 'top') === v,
