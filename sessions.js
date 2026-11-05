@@ -1,5 +1,5 @@
 // Session state from Claude Code hook events. Pure, no Electron.
-const path = require('path');
+const base = p => p.split(/[\\/]/).filter(Boolean).pop() || ''; // either separator, so it reads Windows paths on a Mac too
 
 const STEP = {
   Read: 'read', Glob: 'read', Grep: 'read', WebFetch: 'read', WebSearch: 'read',
@@ -35,8 +35,8 @@ function apply(map, ev) {
   if (!s) map.set(id, (s = { id, state: 'idle', steps: [], step: null, detail: '', ask: null }));
   // a worktree counts as its project: ...\JG WEBSITE NEW\.claude\worktrees\determined-pike -> JG WEBSITE NEW
   const [root, wt] = (ev.cwd || '').split(/[\\/]\.claude[\\/]worktrees[\\/]/);
-  s.name = path.basename(root) || s.name || 'session';
-  s.wt = wt ? path.basename(wt) : '';  s.desktop = ev.orb_entry === 'claude-desktop';
+  s.name = base(root) || s.name || 'session';
+  s.wt = wt ? base(wt) : '';  s.desktop = ev.orb_entry === 'claude-desktop';
   s.host = ev.orb_host || s.host || '';
   s.ts = ev.orb_ts || Date.now();
 
