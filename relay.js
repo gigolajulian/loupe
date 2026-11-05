@@ -1,6 +1,6 @@
 // Claude Code hook -> LOUPE. Fail-open: exits 0 with no output whenever LOUPE is closed or doesn't answer.
-// Never waits by default, so every prompt shows in the thread at once and LOUPE only mirrors it. With the tray's
-// "Answer prompts on LOUPE", permission requests and AskUserQuestion wait for LOUPE's answer instead.
+// AskUserQuestion waits for LOUPE's answer while you're at the PC (LOUPE releases it to the thread when you're away).
+// Permissions show in the thread at once and LOUPE mirrors them, unless the tray's "Answer permissions on LOUPE" is on.
 // LOUPE writes this file to ~/.loupe/relay.js on every launch. Usage in settings.json: node "<home>/.loupe/relay.js"
 const net = require('net');
 const os = require('os');
@@ -25,9 +25,10 @@ process.stdin.on('end', () => {
   ev.orb_entry = process.env.CLAUDE_CODE_ENTRYPOINT || 'cli';
   ev.orb_host = process.env.CLAUDE_CODE_HOST_SESSION_ID || ''; // Claude app session id, for claude:// links
   ev.orb_ts = Date.now();
-  // a held hook keeps its prompt out of the thread, so only the tray's "Answer prompts on LOUPE" holds one
-  ev.orb_wait = (ev.hook_event_name === 'PermissionRequest' ||
-    (ev.hook_event_name === 'PreToolUse' && ev.tool_name === 'AskUserQuestion')) && answerOnIsland();
+  // a held hook keeps its prompt out of the thread. Questions are always offered to LOUPE, which lets them go to
+  // the thread at once when you're away from the PC; permissions wait only with the tray's "Answer permissions on LOUPE".
+  ev.orb_wait = (ev.hook_event_name === 'PreToolUse' && ev.tool_name === 'AskUserQuestion') ||
+    (ev.hook_event_name === 'PermissionRequest' && answerOnIsland());
   const sock = net.connect(PIPE, () => {
     if (!ev.orb_wait) return sock.end(JSON.stringify(ev) + '\n', bail);
     clearTimeout(quick); // the hook's own timeout bounds the wait

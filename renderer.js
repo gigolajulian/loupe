@@ -290,8 +290,8 @@ function renderAsk(s, waiting) {
     return;
   }
 
-  // pick, then Submit at the bottom. Held (tray "Answer prompts on LOUPE"): Submit answers here.
-  // Mirrored: only the thread can answer, so Submit opens the session there.
+  // pick, then Submit at the bottom. Held (you were at the PC): Submit answers here.
+  // Mirrored (you were away): only the thread can answer, so Submit opens the session there.
   const picks = {};
   const done = () => a.questions.every(q => picks[q.question] && picks[q.question].length);
   const answers = () => Object.fromEntries(a.questions.map(q => [q.question, picks[q.question].join(', ')]));

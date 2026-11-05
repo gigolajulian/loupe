@@ -2,7 +2,7 @@
 
 A black island at the top of the main display that shows your live Claude Code sessions: what each one is doing, and a mirror of every permission and question. Click a project to open it in the Claude app. On a Mac it sits in the notch.
 
-Prompts always show in the Claude Code thread first. LOUPE only mirrors them, unless you turn on tray "Answer prompts on LOUPE".
+Questions are answered on LOUPE while you're at the PC and go to the Claude Code thread when you're away. Permissions show in the thread and LOUPE mirrors them.
 
 ## Install or upgrade with Claude
 
@@ -68,9 +68,9 @@ Tray "Check Claude Code hooks" (or `LOUPE --check-hooks`) shows whether `node` r
 
 ## Prompts
 
-By default no hook waits, so every permission, question and plan approval shows in the thread at once. LOUPE mirrors it: the command or question, "in app" to open the session, × to close the card. On a question you can pick, then "Submit in app" opens the session.
+Questions wait on LOUPE while you're at the PC: pick, then Submit answers them there. While one waits, the thread doesn't show it. After 2 minutes with no keyboard or mouse, or on "in app" or ×, it goes back to the thread and LOUPE keeps a mirror of it. A question that comes in while you're away goes straight to the thread.
 
-Tray "Answer prompts on LOUPE (hides them from the thread until answered)" makes permissions and questions wait for the island: Allow / Deny / Always, or pick and Submit. While one waits, the thread doesn't show it. That's why it is off by default, and why `PreToolUse` and `PermissionRequest` have the long timeout.
+Permissions and plan approvals show in the thread at once and LOUPE mirrors them. Tray "Answer permissions on LOUPE (hides them from the thread until answered)" makes permissions wait for the island too: Allow / Deny / Always. That's why `PreToolUse` and `PermissionRequest` have the long timeout.
 
 ## Check it
 

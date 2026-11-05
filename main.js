@@ -1,4 +1,4 @@
-const { app, BrowserWindow, screen, ipcMain, Tray, Menu, nativeImage, nativeTheme, shell, dialog } = require('electron');
+const { app, BrowserWindow, screen, ipcMain, Tray, Menu, nativeImage, nativeTheme, shell, dialog, powerMonitor } = require('electron');
 const net = require('net');
 const fs = require('fs');
 const os = require('os');
@@ -76,6 +76,19 @@ function readTitle(s, file) {
   });
 }
 
+// no keyboard or mouse for 2 minutes: held prompts go back to the thread, so a phone or a later look at the app sees them
+const AWAY_S = 120;
+const away = () => powerMonitor.getSystemIdleTime() >= AWAY_S;
+function releaseIfAway() {
+  if (!pending.size || !away()) return;
+  for (const [req, p] of pending) {
+    pending.delete(req);
+    p.sock.end('null\n'); // no decision: Claude Code asks in the thread
+    for (const s of sessions.values()) if (s.ask && s.ask.req === req) s.ask.req = undefined; // keep the card, mirrored
+  }
+  push();
+}
+
 function listen() {
   const server = net.createServer(sock => {
     let buf = '';
@@ -88,6 +101,7 @@ function listen() {
         let ev;
         try { ev = JSON.parse(line); } catch { continue; }
         lastEvent = Date.now();
+        if (ev.orb_wait && away()) { ev.orb_wait = false; sock.end('null\n'); } // away: straight to the thread, mirrored
         if (ev.orb_wait) {
           const req = ev.orb_req = String(++seq);
           pending.set(req, { sock, ev });
@@ -266,7 +280,7 @@ app.whenReady().then(() => {
     { label: 'Sounds', type: 'checkbox', checked: cfg.sound,
       click: () => { cfg.sound = !cfg.sound; fs.writeFileSync(cfgPath, JSON.stringify(cfg)); sendCfg(); menu(); } },
     // relay.js reads this: on, permissions and questions wait for the island and stay out of the thread until answered
-    { label: 'Answer prompts on LOUPE (hides them from the thread until answered)', type: 'checkbox', checked: !!cfg.answerOnIsland,
+    { label: 'Answer permissions on LOUPE (hides them from the thread until answered)', type: 'checkbox', checked: !!cfg.answerOnIsland,
       click: () => { cfg.answerOnIsland = !cfg.answerOnIsland; fs.writeFileSync(cfgPath, JSON.stringify(cfg)); menu(); } },
     // installed app only: in dev this would register electron.exe itself
     ...(app.isPackaged ? [{ label: MAC ? 'Open at Login' : 'Start with Windows', type: 'checkbox', checked: app.getLoginItemSettings().openAtLogin,
@@ -306,6 +320,7 @@ app.whenReady().then(() => {
 
   listen();
   setInterval(push, 1000); // done -> idle fade, stale drop
+  setInterval(releaseIfAway, 5000);
 
   // dev: LOUPE_SNAP=out.png writes what the window draws every second
   if (process.env.LOUPE_SNAP) {
