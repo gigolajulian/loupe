@@ -10,7 +10,7 @@
     "start": "electron .",
     "icons": "sh logo/export-icons.sh",
     "dist": "electron-builder --win nsis",
-    "dist:mac": "electron-builder --mac",
+    "dist:mac": "sh mac/build.sh && electron-builder --mac",
     "release": "electron-builder --win nsis --publish always"
   },
   "build": {
@@ -51,7 +51,13 @@
       "identity": null,
       "extendInfo": {
         "LSUIElement": true
-      }
+      },
+      "extraResources": [
+        {
+          "from": "mac/bin/menubar",
+          "to": "menubar"
+        }
+      ]
     },
     "nsis": {
       "oneClick": true,
