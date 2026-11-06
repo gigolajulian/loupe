@@ -81,8 +81,6 @@ Windows installs from 0.2.12 on update themselves: LOUPE checks this repo's rele
 
 Claude Code talks to LOUPE through `relay.js`, which forwards each hook event over a named pipe (a Unix socket on the Mac). LOUPE writes its own copy to `~/.loupe/relay.js` on every launch, so updates reach it. If LOUPE is closed, the relay exits at once and Claude Code works as usual.
 
-Privacy: events stay on the computer, over that local pipe. The only network use is the update check against this repo's releases.
-
 On launch, if any of the 10 hooks is missing, LOUPE opens the hook check with its Fix button.
 
 Tray "Check Claude Code hooks" (or `LOUPE --check-hooks`) shows whether `node` runs, whether each hook points at `~/.loupe/relay.js`, leftover Coucou or old-path hooks, and when the last event came in. "Fix hooks" (or `LOUPE --fix-hooks`, no dialog first) writes these after a backup:
