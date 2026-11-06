@@ -1,8 +1,40 @@
-# LOUPE
+<p align="center"><img src="logo/app.svg" width="88" alt="LOUPE mark: three dots, the middle one cyan"></p>
+
+<h1 align="center">LOUPE</h1>
+
+<p align="center">Your Claude Code sessions, live, in one black island at the top of the screen.<br>Windows and Mac. Local only.</p>
+
+<p align="center"><img src="docs/loupe.gif" width="720" alt="The island moving through idle, thinking, working, the open list, needs you, a question and a permission"></p>
 
 A black island at the top of the main display that shows your live Claude Code sessions: what each one is doing, and a mirror of every permission and question. Click a project to open it in the Claude app. On a Mac it sits in the notch.
 
 Questions are answered on LOUPE while you're at the PC and go to the Claude Code thread when you're away. Permissions show in the thread and LOUPE mirrors them.
+
+## In action
+
+<p align="center"><img src="docs/in-action-panel.jpg" width="820" alt="LOUPE open over the Claude app: four projects, each with what it is doing"></p>
+<p align="center"><img src="docs/in-action-question.jpg" width="820" alt="A question from Claude Code answered on LOUPE, over the Claude app"></p>
+
+## How it works
+
+```
+Claude Code hook  >  relay.js  >  local pipe  >  LOUPE island
+```
+
+Every hook event runs `relay.js`. The relay hands it to LOUPE over a named pipe (a Unix socket on the Mac) and exits. LOUPE keeps one row per project and draws the most urgent session in the orb.
+
+| Idle | Thinking | Working |
+|:-:|:-:|:-:|
+| <img src="docs/state-idle.png" width="260" alt="Idle: the LOUPE mark and how long ago"> | <img src="docs/state-thinking.png" width="260" alt="Thinking: a breathing ring of dots"> | <img src="docs/state-working.png" width="260" alt="Working: the orb and the file being edited"> |
+| The orb folds into the mark. | A prompt went in. | What it reads, edits or runs. |
+
+| Open | Needs you |
+|:-:|:-:|
+| <img src="docs/state-open.png" width="400" alt="Open panel: every live project with its steps"> | <img src="docs/state-needs-you.png" width="400" alt="Needs you: the row turns cyan and the panel opens"> |
+| Hover the island. Steps of one project share a row. | Cyan, a sound, and the panel opens by itself. |
+| **Question** | **Permission** |
+| <img src="docs/state-question.png" width="400" alt="Question card with numbered options and Submit"> | <img src="docs/state-permission.png" width="400" alt="Permission card with the command, Allow, Deny and Always"> |
+| Pick, then Submit, without leaving what you're in. | Mirrored from the thread, or answered here if you turn that on. |
 
 ## Install or upgrade with Claude
 
@@ -88,6 +120,13 @@ Permissions and plan approvals show in the thread at once and LOUPE mirrors them
 - **Project:** the session's folder. Worktrees count under their parent project.
 - **Step:** the session's title in the Claude app. "Site - QA" shows as QA. Sessions of one project share a row: `SITE  UI › QA › RELEASE`, with what it's doing on the line under.
 - The 5 most active projects show. Needs-you comes first, in cyan, with a sound.
+
+## Privacy
+
+- Everything stays on the PC. Hook events go from `relay.js` to LOUPE over a local pipe and nowhere else.
+- The relay fails open. If LOUPE is closed, it exits at once and Claude Code works as usual.
+- `~/.claude/settings.json` is backed up to `settings.json.bak-loupe-<time>` before LOUPE changes a hook. Other hooks stay.
+- Update checks and downloads from this repo's GitHub releases are the only network use.
 
 ## Dev
 
