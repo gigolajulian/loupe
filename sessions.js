@@ -9,6 +9,7 @@ const STEP = {
 const RANK = { need: 0, err: 1, work: 2, think: 3, done: 4, idle: 5 };
 const DONE_MS = 5000;
 const STALE_MS = 12 * 3600e3; // Code tab sessions rarely send SessionEnd
+const TEST_ID = 'loupe-test', TEST_MS = 10e3; // the README's install test clears itself
 
 function detail(ev) {
   const i = ev.tool_input || {};
@@ -42,7 +43,7 @@ function apply(map, ev) {
 
   switch (ev.hook_event_name) {
     case 'UserPromptSubmit':
-      Object.assign(s, { state: 'think', steps: [], step: null, detail: '', ask: null });
+      Object.assign(s, { state: 'think', steps: [], step: null, detail: '', desc: '', tool: '', ask: null });
       break;
     case 'PreToolUse':
       if (ev.tool_name === 'AskUserQuestion') { s.state = 'need'; s.ask = ask(ev); break; } // shown, answered in the thread
@@ -51,6 +52,8 @@ function apply(map, ev) {
       s.step = STEP[ev.tool_name] || null;
       if (s.step && !s.steps.includes(s.step)) s.steps.push(s.step);
       s.detail = detail(ev);
+      s.tool = ev.tool_name;
+      s.desc = (ev.tool_input || {}).description || ''; // Bash, PowerShell and Agent calls say what they do in plain words
       break;
     case 'PermissionRequest':
       s.state = 'need'; s.detail = detail(ev); s.ask = ask(ev);
@@ -103,7 +106,7 @@ function reply(ev, choice) {
 function view(map, now = Date.now()) {
   for (const s of map.values()) {
     if (s.state === 'done' && now - s.doneAt > DONE_MS) s.state = 'idle';
-    if (now - s.ts > STALE_MS) map.delete(s.id);
+    if (now - s.ts > (s.id === TEST_ID ? TEST_MS : STALE_MS)) map.delete(s.id);
   }
   return [...map.values()].sort((a, b) => RANK[a.state] - RANK[b.state] || b.ts - a.ts);
 }
@@ -150,6 +153,12 @@ if (require.main === module) {
   e('PermissionRequest', { ...perm, orb_wait: false, orb_req: undefined, orb_ts: 7 });
   assert.equal(m.get('a').ask.req, undefined); assert.equal(m.get('a').ask.at, 7);
   e('PreToolUse', { tool_name: 'Read', tool_input: { file_path: 'y' } }); assert.equal(m.get('a').ask, null);
+
+  e('PreToolUse', { tool_name: 'Bash', tool_input: { command: 'rg x', description: 'Check the install steps' } });
+  assert.equal(m.get('a').desc, 'Check the install steps');
+  apply(m, { session_id: 'loupe-test', cwd: 'C:/LOUPE TEST', hook_event_name: 'UserPromptSubmit' });
+  assert.ok(view(m).some(s => s.id === 'loupe-test'));
+  assert.ok(!view(m, Date.now() + 11e3).some(s => s.id === 'loupe-test'));
 
   e('Stop'); assert.equal(view(m, Date.now() + 6000).find(s => s.id === 'a').state, 'idle');
   e('SessionEnd'); assert.ok(!m.has('a'));

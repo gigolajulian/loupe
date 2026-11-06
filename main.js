@@ -126,7 +126,8 @@ function listen() {
 }
 
 // tray "Check Claude Code hooks": node, the 10 relay hooks, leftovers, last event. Fix backs up settings.json first.
-function hookCheck(autoFix) {
+// onlyIfBad: the launch check, which stays quiet when everything is set
+function hookCheck(autoFix, onlyIfBad) {
   const file = path.join(os.homedir(), '.claude', 'settings.json');
   let settings = {}, bad = '';
   try { settings = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) { if (e.code !== 'ENOENT') bad = e.message; }
@@ -148,6 +149,7 @@ function hookCheck(autoFix) {
   ];
   const ok = r.ok && !!node && !bad;
   const fixable = !r.ok && !bad;
+  if (onlyIfBad && ok) return;
   (autoFix && fixable ? Promise.resolve({ response: 0 }) : dialog.showMessageBox({
     type: ok ? 'info' : 'warning', title: 'LOUPE', message: ok ? 'Claude Code hooks are set' : 'Claude Code hooks need a look',
     detail: lines.filter((l, i) => l || lines[i - 1]).join('\n') + (fixable ? '\n\nFix hooks backs up settings.json, removes old LOUPE and Coucou hooks and adds the 10 LOUPE hooks. Other hooks stay.' : ''),
@@ -299,7 +301,7 @@ app.whenReady().then(() => {
     ...(app.isPackaged ? [{ label: MAC ? 'Open at Login' : 'Start with Windows', type: 'checkbox', checked: app.getLoginItemSettings().openAtLogin,
       click: item => { app.setLoginItemSettings({ openAtLogin: item.checked }); menu(); } }] : []),
     { type: 'separator' },
-    { label: 'Check Claude Code hooks', click: hookCheck },
+    { label: 'Check Claude Code hooks', click: () => hookCheck() },
     ready ? { label: `Restart to update to ${ready}`, click: () => require('electron-updater').autoUpdater.quitAndInstall() }
       : { label: `Check for updates (${app.getVersion()})`, enabled: app.isPackaged, click: () => checkUpdates(true) },
     { label: 'Quit LOUPE', click: () => app.quit() },
@@ -327,7 +329,8 @@ app.whenReady().then(() => {
     setInterval(() => checkUpdates(false), 4 * 3600e3);
   } catch (e) { console.log('updater failed', e); }
   menu();
-  hookArgs(process.argv);
+  // first run or broken hooks: show the check with its Fix button, so setup never fails silently
+  if (/--(fix|check)-hooks/.test(process.argv.join(' '))) hookArgs(process.argv); else hookCheck(false, true);
   // the island's own sound controls
   ipcMain.on('config', (_, patch) => { Object.assign(cfg, patch); fs.writeFileSync(cfgPath, JSON.stringify(cfg)); menu(); });
 

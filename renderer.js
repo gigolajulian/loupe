@@ -32,11 +32,15 @@ function look(s) {
 }
 
 function verb(s) {
-  const d = s.detail || '', f = d.split(/[\/]/).pop();
+  const d = s.detail || '', f = d.split(/[\\/]/).filter(Boolean).pop() || d;
   switch (s.state) {
     case 'need': return 'needs you';
     case 'think': return 'thinking';
     case 'work':
+      // Claude's own words for the call when it wrote some, lowercased to match the other states ("Check X" -> "check X")
+      if (s.desc) return /^[A-Z][a-z]/.test(s.desc) ? s.desc[0].toLowerCase() + s.desc.slice(1) : s.desc;
+      if (s.tool === 'Grep' || s.tool === 'Glob') return `searching for ${d}`;
+      if (s.tool === 'WebSearch' || s.tool === 'WebFetch') return `looking up ${d.replace(/^https?:\/\/(www\.)?/, '')}`;
       if (s.step === 'read') return `reading ${f}`;
       if (s.step === 'edit') return `editing ${f}`;
       if (s.step === 'run') return `running ${d.split(' ')[0]}`;
@@ -396,6 +400,15 @@ island.addEventListener('mouseleave', () => {
   closing = setTimeout(() => { closing = null; setOpen(last.some(s => s.state === 'need')); }, closeDelay);
 });
 more.addEventListener('click', () => sess.classList.toggle('showterm'));
+// a click on the open panel (a session row included, which also jumps to it) folds it away. It stays shut until
+// the cursor leaves and comes back, since mouseenter only fires again then. A card waiting for an answer keeps it open.
+island.addEventListener('click', e => {
+  if (!island.classList.contains('open') || e.target.closest('button, input, #card, #more') ||
+    muteEl.parentElement.contains(e.target)) return;
+  if (last.some(s => s.ask && !dismissed.has(askKey(s)))) return;
+  clearTimeout(closing); closing = null; hovered = false;
+  setOpen(false);
+});
 
 // Mac: the open panel's glass is a native window behind this one (main.js). Keep it on the island's rect
 // while open or morphing. It starts 16px above the screen, so its top corners are off-screen and the top is square.
