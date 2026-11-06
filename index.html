@@ -137,6 +137,13 @@
   .notch .mini .verb { align-self: center; justify-self: start; padding: 0 0 0 10px; max-width: 110px;
     font: 13px system-ui, -apple-system, sans-serif; color: rgba(255,255,255,.82); }
   .notch .mini .verb.need { color: var(--accent); }
+  /* an app's menus reach the left ear (Xcode): orb and project slide right through the notch and sit before the
+     verb, shortened to fit before the menu bar icons; back when the menus are short again (renderer.js ears) */
+  .notch .mini { position: relative; }
+  .notch .mini .side { transform: translateX(var(--dx-side, 0px)); }
+  .notch .mini .verb { transform: translateX(var(--dx-verb, 0px)); }
+  .notch .mini .side, .notch .mini .verb { transition: transform .6s cubic-bezier(.32,.72,0,1), opacity .3s; }
+  .notch .mini.noverb .verb { opacity: 0; }
   .notch .island:not(.open) { pointer-events: none; }
   .notch .island:not(.open) .gap { pointer-events: auto; }
   /* the notch's concave top shoulders, so the island reads as part of the hardware */

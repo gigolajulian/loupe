@@ -7,4 +7,5 @@ contextBridge.exposeInMainWorld('loupe', {
   open: id => ipcRenderer.send('open', id),  onConfig: cb => ipcRenderer.on('config', (_, c) => cb(c)),
   setConfig: patch => ipcRenderer.send('config', patch),
   glass: rect => ipcRenderer.send('glass', rect),
+  onMenubar: cb => ipcRenderer.on('menubar', (_, m) => cb(m)), // Mac: where app menus end and icons start
 });

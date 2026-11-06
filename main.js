@@ -214,6 +214,32 @@ app.whenReady().then(() => {
     const tint = process.env.LOUPE_TINT || '18,44,70,.45';
     glass.loadURL(`data:text/html,<style>html{background:rgba(${tint})}</style>`);
   }
+  // Mac: a small helper (mac/menubar.swift) reports where the front app's menus end and where the menu bar icons
+  // start; the renderer slides the left ear out of the way when menus reach it. Needs Accessibility for LOUPE.
+  if (MAC) {
+    const bin = app.isPackaged ? path.join(process.resourcesPath, 'menubar') : path.join(__dirname, 'mac', 'bin', 'menubar');
+    let mb = null, lastMenubar = null;
+    const send = () => { if (lastMenubar && !win.isDestroyed()) { const x = win.getBounds().x; win.webContents.send('menubar', { right: lastMenubar.right - x, status: lastMenubar.status - x }); } };
+    const startMenubar = () => {
+      if (!fs.existsSync(bin)) return console.log('menubar helper missing', bin);
+      mb = require('child_process').spawn(bin, [], { stdio: ['pipe', 'pipe', 'ignore'] });
+      let buf = '';
+      mb.stdout.on('data', d => {
+        buf += d; const lines = buf.split('\n'); buf = lines.pop();
+        for (const l of lines) try {
+          const m = JSON.parse(l);
+          if (process.env.LOUPE_SNAP) console.log('menubar', l);
+          if (m.trusted) { lastMenubar = m; send(); }
+        } catch {}
+      });
+      mb.on('exit', () => { mb = null; if (!quitting) setTimeout(startMenubar, 5000); });
+    };
+    let quitting = false;
+    app.on('before-quit', () => { quitting = true; if (mb) mb.kill(); });
+    win.webContents.on('did-finish-load', send);
+    startMenubar();
+  }
+
   ipcMain.on('glass', (_, r) => {
     if (!glass) return;
     if (!r) return glass.hide();

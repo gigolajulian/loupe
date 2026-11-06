@@ -420,3 +420,38 @@ if (notch) {
     window.loupe.glass(on && r.height > min ? { x: r.left, y: top, w: r.width, h: r.height - top } : null);
   }).observe(island);
 }
+
+// Mac: main reports where the front app's menus end and the menu bar icons start (window x). When the menus reach
+// the left ear, the orb and project slide right through the notch to sit before the verb, shortened to fit before
+// the icons; with no room for both, the verb steps aside. Short menus again: they slide back.
+if (notch && window.loupe.onMenubar) {
+  const mini = island.querySelector('.mini'), side = mini.querySelector('.side'), gap = mini.querySelector('.gap'), orbS = $('orb-s');
+  let bar = null;
+  const home = () => {
+    mini.classList.remove('crowded', 'noverb');
+    mini.style.removeProperty('--dx-side'); mini.style.removeProperty('--dx-verb');
+    projEl.style.maxWidth = verbEl.style.maxWidth = '';
+  };
+  const ears = () => {
+    if (island.classList.contains('open')) return; // the row is hidden; keep it as it is for when the panel closes
+    const mx = mini.getBoundingClientRect().left;
+    if (!bar || island.classList.contains('idle') || !projEl.textContent || bar.right <= mx + side.offsetLeft + 2) return home();
+    projEl.style.maxWidth = verbEl.style.maxWidth = '';
+    mini.classList.remove('noverb');
+    const x0 = Math.max(bar.right, mx + gap.offsetLeft + gap.offsetWidth) + 10; // past the menus and the notch
+    const room = bar.status - 10 - x0, lead = orbS.offsetWidth + 7;
+    const vw = verbEl.offsetWidth; // includes its 10px left padding, the space after the project
+    if (lead + projEl.offsetWidth + vw > room) {
+      let pmax = room - lead - Math.min(vw, 90);
+      if (pmax < 40) { mini.classList.add('noverb'); pmax = room - lead; }
+      projEl.style.maxWidth = Math.max(pmax, 0) + 'px';
+      if (!mini.classList.contains('noverb')) verbEl.style.maxWidth = Math.max(room - lead - projEl.offsetWidth - 10, 0) + 'px';
+    }
+    mini.classList.add('crowded');
+    mini.style.setProperty('--dx-side', `${x0 - (mx + orbS.offsetLeft)}px`);
+    mini.style.setProperty('--dx-verb', `${x0 + lead + projEl.offsetWidth - (mx + verbEl.offsetLeft)}px`);
+  };
+  window.loupe.onMenubar(m => { bar = m; ears(); });
+  window.loupe.onState(() => requestAnimationFrame(ears)); // after render() has set the text
+  new MutationObserver(() => requestAnimationFrame(ears)).observe(island, { attributes: true, attributeFilter: ['class'] });
+}
