@@ -216,19 +216,25 @@ app.whenReady().then(() => {
   }
   // Mac: a small helper (mac/menubar.swift) reports where the front app's menus end and where the menu bar icons
   // start; the renderer slides the left ear out of the way when menus reach it. Needs Accessibility for LOUPE.
+  let axTrusted = null;   // Mac: whether the menu bar helper has Accessibility (null until it says)
   if (MAC) {
     const bin = app.isPackaged ? path.join(process.resourcesPath, 'menubar') : path.join(__dirname, 'mac', 'bin', 'menubar');
     let mb = null, lastMenubar = null;
     const send = () => { if (lastMenubar && !win.isDestroyed()) { const x = win.getBounds().x; win.webContents.send('menubar', { right: lastMenubar.right - x, status: lastMenubar.status - x }); } };
     const startMenubar = () => {
       if (!fs.existsSync(bin)) return console.log('menubar helper missing', bin);
-      mb = require('child_process').spawn(bin, [], { stdio: ['pipe', 'pipe', 'ignore'] });
+      // macOS's Accessibility dialog once ever (a marker in userData). After that a missing grant shows in the tray.
+      const marker = path.join(app.getPath('userData'), 'asked-accessibility');
+      const first = !fs.existsSync(marker);
+      if (first) try { fs.writeFileSync(marker, new Date().toISOString()); } catch {}
+      mb = require('child_process').spawn(bin, first ? ['--prompt'] : [], { stdio: ['pipe', 'pipe', 'ignore'] });
       let buf = '';
       mb.stdout.on('data', d => {
         buf += d; const lines = buf.split('\n'); buf = lines.pop();
         for (const l of lines) try {
           const m = JSON.parse(l);
           if (process.env.LOUPE_SNAP) console.log('menubar', l);
+          if (axTrusted !== !!m.trusted) { axTrusted = !!m.trusted; try { menu(); } catch {} }
           if (m.trusted) { lastMenubar = m; send(); }
         } catch {}
       });
@@ -327,6 +333,10 @@ app.whenReady().then(() => {
     ...(app.isPackaged ? [{ label: MAC ? 'Open at Login' : 'Start with Windows', type: 'checkbox', checked: app.getLoginItemSettings().openAtLogin,
       click: item => { app.setLoginItemSettings({ openAtLogin: item.checked }); menu(); } }] : []),
     { type: 'separator' },
+    ...(MAC && axTrusted === false ? [{ label: 'Allow Accessibility for the menu bar slide…', click: () => {
+      shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility');
+      say('Accessibility for LOUPE', 'If LOUPE is already on in the list, select it, remove it with −, then add it back with + from Applications. Each new build needs this once.');
+    } }] : []),
     { label: 'Check Claude Code hooks', click: () => hookCheck() },
     ready ? { label: `Restart to update to ${ready}`, click: () => require('electron-updater').autoUpdater.quitAndInstall() }
       : { label: `Check for updates (${app.getVersion()})`, enabled: app.isPackaged, click: () => checkUpdates(true) },

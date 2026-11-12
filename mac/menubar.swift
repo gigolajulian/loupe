@@ -44,7 +44,10 @@ func statusLeft() -> Int {
 }
 
 var last = ""
-var asked = false
+// macOS's own "allow Accessibility" dialog only when LOUPE asks for it (--prompt), which is once ever: LOUPE is
+// ad-hoc signed, so every new build has a new signature and the old grant stops matching while System Settings
+// still shows it on. Asking at every launch then nags with a dialog that can't fix it. LOUPE's tray says what to do.
+var asked = !CommandLine.arguments.contains("--prompt")
 func tick() {
   let trusted = AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: !asked] as CFDictionary)
   asked = true
