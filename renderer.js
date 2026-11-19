@@ -402,6 +402,7 @@ island.addEventListener('mouseleave', () => {
   clearTimeout(closing);
   closing = setTimeout(() => { closing = null; setOpen(last.some(s => s.state === 'need')); }, closeDelay);
 });
+window.loupe.onLeave(() => island.dispatchEvent(new MouseEvent('mouseleave'))); // main saw the cursor outside the window
 more.addEventListener('click', () => sess.classList.toggle('showterm'));
 // a click on the open panel (a session row included, which also jumps to it) folds it away. It stays shut until
 // the cursor leaves and comes back, since mouseenter only fires again then. A card waiting for an answer keeps it open.

@@ -89,6 +89,7 @@ function releaseIfAway() {
 function setFront(on) {
   if (on === claudeFront) return;
   claudeFront = on;
+  if (process.env.LOUPE_SNAP) console.log('claude in front:', on);
   if (on && pending.size) release(); else push();
 }
 // every held prompt back to Claude Code, which then asks in the thread. The card stays, mirrored.
@@ -269,7 +270,17 @@ app.whenReady().then(() => {
   });
 
   // island under the cursor takes clicks, the rest of the window passes them through
-  ipcMain.on('hover', (_, on) => win.setIgnoreMouseEvents(!on, { forward: true }));
+  // a fast exit can leave the whole window between two mouse events, and then the island never gets mouseleave
+  // and the panel stays open. While hovered, check the cursor and send the leave ourselves.
+  let hoverPoll = null;
+  ipcMain.on('hover', (_, on) => {
+    win.setIgnoreMouseEvents(!on, { forward: true });
+    clearInterval(hoverPoll); hoverPoll = null;
+    if (on) hoverPoll = setInterval(() => {
+      const p = screen.getCursorScreenPoint(), b = win.getBounds();
+      if (p.x < b.x || p.y < b.y || p.x >= b.x + b.width || p.y >= b.y + b.height) win.webContents.send('leave');
+    }, 300);
+  });
   // open a Code tab session in the Claude app. Terminal sessions have no app id, so nothing happens.
   ipcMain.on('open', (_, id) => {
     const s = sessions.get(id);
