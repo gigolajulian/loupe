@@ -1,6 +1,7 @@
 // LOUPE menu bar watcher (Mac). Prints one JSON line whenever it changes:
-//   {"trusted":true,"right":732,"status":1068}
+//   {"trusted":true,"right":732,"status":1068,"front":"com.apple.dt.Xcode"}
 // right: where the front app's menus end, status: where the menu bar icons start (global points, main screen).
+// front: the front app's bundle id, which needs no Accessibility (LOUPE goes quiet while Claude is in front).
 // LOUPE moves its left ear out of the way when an app's menus reach it. Needs Accessibility for LOUPE.
 import AppKit
 import ApplicationServices
@@ -51,7 +52,9 @@ var asked = !CommandLine.arguments.contains("--prompt")
 func tick() {
   let trusted = AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: !asked] as CFDictionary)
   asked = true
-  let line = trusted ? "{\"trusted\":true,\"right\":\(menusRight()),\"status\":\(statusLeft())}" : "{\"trusted\":false}"
+  let front = (NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "").replacingOccurrences(of: "\"", with: "")
+  let line = trusted ? "{\"trusted\":true,\"right\":\(menusRight()),\"status\":\(statusLeft()),\"front\":\"\(front)\"}"
+    : "{\"trusted\":false,\"front\":\"\(front)\"}"
   if line != last { last = line; print(line); fflush(stdout) }
 }
 NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { _ in

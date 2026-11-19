@@ -15,6 +15,9 @@ const W = 760, H = 460;
 const sessions = new Map();
 const pending = new Map(); // req -> { sock, ev }: hooks waiting for an answer
 let seq = 0, lastEvent = 0;
+// Claude's own window is in front: its questions go straight to the thread and LOUPE stays quiet. A question LOUPE
+// is holding goes back to the thread the moment you switch to Claude, so you answer it in whichever place you go to.
+let claudeFront = false;
 let win, tray;
 
 if (!app.requestSingleInstanceLock()) process.exit(0);
@@ -61,7 +64,7 @@ function overlayCheck(own) {
 }
 
 function push() {
-  if (win && !win.isDestroyed()) win.webContents.send('state', view(sessions));
+  if (win && !win.isDestroyed()) { win.webContents.send('front', claudeFront); win.webContents.send('state', view(sessions)); }
 }
 
 // the session's title (the app's rename, e.g. "JG - QA") is the last agent-name line in its transcript
@@ -81,6 +84,15 @@ const AWAY_S = 120;
 const away = () => powerMonitor.getSystemIdleTime() >= AWAY_S;
 function releaseIfAway() {
   if (!pending.size || !away()) return;
+  release();
+}
+function setFront(on) {
+  if (on === claudeFront) return;
+  claudeFront = on;
+  if (on && pending.size) release(); else push();
+}
+// every held prompt back to Claude Code, which then asks in the thread. The card stays, mirrored.
+function release() {
   for (const [req, p] of pending) {
     pending.delete(req);
     p.sock.end('null\n'); // no decision: Claude Code asks in the thread
@@ -101,7 +113,8 @@ function listen() {
         let ev;
         try { ev = JSON.parse(line); } catch { continue; }
         lastEvent = Date.now();
-        if (ev.orb_wait && away()) { ev.orb_wait = false; sock.end('null\n'); } // away: straight to the thread, mirrored
+        // away, or Claude in front: straight to the thread, mirrored
+        if (ev.orb_wait && (away() || claudeFront)) { ev.orb_wait = false; sock.end('null\n'); }
         if (ev.orb_wait) {
           const req = ev.orb_req = String(++seq);
           pending.set(req, { sock, ev });
@@ -235,6 +248,7 @@ app.whenReady().then(() => {
           const m = JSON.parse(l);
           if (process.env.LOUPE_SNAP) console.log('menubar', l);
           if (axTrusted !== !!m.trusted) { axTrusted = !!m.trusted; try { menu(); } catch {} }
+          if (typeof m.front === 'string') setFront(m.front === 'com.anthropic.claudefordesktop');
           if (m.trusted) { lastMenubar = m; send(); }
         } catch {}
       });
@@ -261,6 +275,25 @@ app.whenReady().then(() => {
     const s = sessions.get(id);
     if (s && /^local_[\w-]+$/.test(s.host)) shell.openExternal(`claude://claude.ai/epitaxy/${s.host}`);
   });
+  // Windows: the foreground window's program, once a second. Mac: the menu bar helper reports it (setFront above).
+  if (!MAC) try {
+    const koffi = require('koffi');
+    const user32 = koffi.load('user32.dll'), kernel32 = koffi.load('kernel32.dll');
+    const fg = user32.func('intptr_t __stdcall GetForegroundWindow()');
+    const pidOf = user32.func('uint32 __stdcall GetWindowThreadProcessId(intptr_t hwnd, _Out_ uint32 *pid)');
+    const open = kernel32.func('intptr_t __stdcall OpenProcess(uint32 access, bool inherit, uint32 pid)');
+    const close = kernel32.func('bool __stdcall CloseHandle(intptr_t h)');
+    const image = kernel32.func('bool __stdcall QueryFullProcessImageNameW(intptr_t h, uint32 flags, _Out_ uint16 *name, _Inout_ uint32 *size)');
+    const exe = () => {
+      const pid = [0]; pidOf(fg(), pid);
+      const h = open(0x1000 /* PROCESS_QUERY_LIMITED_INFORMATION */, false, pid[0]);
+      if (!h) return '';
+      try { const buf = new Uint16Array(1024), size = [1024]; return image(h, 0, buf, size) ? String.fromCharCode(...buf.subarray(0, size[0])) : ''; }
+      finally { close(h); }
+    };
+    setInterval(() => { try { setFront(/[\\/]claude\.exe$/i.test(exe())); } catch {} }, 1000);
+  } catch (e) { console.log('foreground watch off', e.message); }
+
   ipcMain.on('answer', (_, { req, choice }) => {
     const p = pending.get(req);
     if (!p) return;

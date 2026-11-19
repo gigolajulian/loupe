@@ -1,6 +1,8 @@
 // One dotted orb (thinking-orbs engine, MIT) shows the most urgent session. The list under it is plain text.
 import { resolvePreset, MODE_FRAMES } from './node_modules/thinking-orbs/dist/engine.es.js';
 
+let claudeFront = false; // Claude's window is in front (main.js): no "needs you" sound, no panel popping open
+window.loupe.onFront(on => { claudeFront = on; });
 const $ = id => document.getElementById(id);
 const island = $('island'), sess = $('sess'), more = $('more'), verbEl = $('verb'), projEl = $('proj');
 const orbs = [$('orb-s'), $('orb-l')]; // collapsed and open sizes, same state
@@ -181,7 +183,8 @@ function render(list) {
   island.classList.toggle('empty', !list.length);
   island.classList.toggle('idle', !!list[0] && (list[0].state === 'idle' || list[0].state === 'done')); // lighter glass
   const asking = list.filter(s => s.ask && !dismissed.has(askKey(s)));
-  if (!closing) setOpen(hovered || asking.length > 0 || list.some(s => s.state === 'need' && !s.ask));
+  // Claude in front: you answer there, so the panel doesn't pop open. The orb still shows "needs you".
+  if (!closing) setOpen(hovered || (!claudeFront && (asking.length > 0 || list.some(s => s.state === 'need' && !s.ask))));
 
   cur = look(list[0]);
   kick();
@@ -234,7 +237,7 @@ const seen = new Map(); // session id -> last state; a session's first sighting 
 function cues(list) {
   for (const s of list) {
     const was = seen.get(s.id);
-    if (sound && was && was !== s.state && CUE[s.state]) CUE[s.state]();
+    if (sound && was && was !== s.state && CUE[s.state] && !(claudeFront && s.state === 'need')) CUE[s.state]();
     seen.set(s.id, s.state);
   }
 }
