@@ -130,42 +130,26 @@ const step = s => {
   const t = (s.title || '').replace(/^[^:-]*?\s(?:-|:)\s+|^[^:]+:\s+/, '');
   return t && t.toUpperCase() !== s.name.toUpperCase() ? t : s.wt || '';
 };
-const quiet = s => s.state === 'idle' || s.state === 'done';
-// QA and RELEASE close the pipeline, every other step comes before them
-const stage = l => ({ QA: 1, RELEASE: 2 })[l.toUpperCase()] || 0;
+const active = s => s.state === 'need' || s.state === 'work' || s.state === 'think';
 
-// sessions of one project share a row: the list is sorted, so each group's first is its most urgent
-function groups(list) {
-  const m = new Map();
-  for (const s of list) (m.get(s.name) || m.set(s.name, []).get(s.name)).push(s);
-  return [...m.values()];
-}
-
-// --- session list: one keyed row per project, reordered in place
-function sync(gs) {
-  const live = new Set(gs.map(g => g[0].name));
+// --- session list: one keyed cell per active thread, its name on top and what it's doing under it, reordered in place
+const title = s => s.title || [s.name, s.wt].filter(Boolean).join(' › ');
+function sync(list) {
+  const live = new Set(list.map(s => s.id));
   for (const [k, r] of rows) if (!live.has(k)) { r.remove(); rows.delete(k); }
-  gs.forEach((g, i) => {
-    const s = g[0];
-    let r = rows.get(s.name);
+  list.forEach((s, i) => {
+    let r = rows.get(s.id);
     if (!r) {
       r = document.createElement('div');
-      r.innerHTML = '<div class="top"><span class="n"></span><span class="st"></span></div><div class="v"></div>';
-      rows.set(s.name, r);
+      r.innerHTML = '<div class="top"><span class="n"></span></div><div class="v"></div>';
+      rows.set(s.id, r);
     }
     r.onclick = () => window.loupe.open(s.id);
-    const want = i === 0 ? sess.firstChild : rows.get(gs[i - 1][0].name).nextSibling;
+    const want = i === 0 ? sess.firstChild : rows.get(list[i - 1].id).nextSibling;
     if (r !== want) sess.insertBefore(r, want || more);
-    r.className = 'r' + (s.state === 'need' ? ' need' : quiet(s) ? ' quiet' : '') + (g.some(x => x.desktop) ? '' : ' term') + (s.host ? ' go' : '');
-    r.querySelector('.n').textContent = s.name;
+    r.className = 'r' + (s.state === 'need' ? ' need' : '') + (s.desktop ? '' : ' term') + (s.host ? ' go' : '');
+    r.querySelector('.n').textContent = r.title = title(s);
     r.querySelector('.v').textContent = verb(s);
-    const steps = g.filter(step).sort((a, b) => stage(step(a)) - stage(step(b)) || step(a).localeCompare(step(b)));
-    r.querySelector('.st').replaceChildren(...steps.flatMap((x, j) => {
-      const e = document.createElement('span');
-      e.textContent = step(x);
-      e.className = x.state === 'need' ? 'need' : quiet(x) ? '' : 'on';
-      return j ? [' › ', e] : [e];
-    }));
   });
 }
 
@@ -176,9 +160,8 @@ const askKey = s => s.ask.req || `${s.id}:${s.ask.at}`;
 window.loupe.onState(render);
 function render(list) {
   last = list;
-  // the open list skips projects where every session is idle
-  const gs = groups(list).filter(g => g.some(s => s.state !== 'idle')), app = gs.filter(g => g.some(s => s.desktop));
-  const termGs = gs.filter(g => !app.includes(g)), term = termGs.length;
+  // the open list shows only active threads: working, thinking or waiting on you
+  const act = list.filter(active), app = act.filter(s => s.desktop), termS = act.filter(s => !s.desktop), term = termS.length;
 
   island.classList.toggle('empty', !list.length);
   island.classList.toggle('idle', !!list[0] && (list[0].state === 'idle' || list[0].state === 'done')); // lighter glass
@@ -192,10 +175,11 @@ function render(list) {
   verbEl.textContent = list[0] ? verb(list[0]) : '';
   verbEl.classList.toggle('need', cur.ink === 'cyan');
 
-  // nothing running: a compact panel with the last 3 projects and how long they've been idle
-  const calm = !gs.length;
+  const calm = !act.length;
   island.classList.toggle('calm', calm);
-  sync(calm ? groups(list).slice(0, 3) : [...app.slice(0, 5), ...termGs]);
+  sync([...app.slice(0, 8), ...termS]);
+  const need = act.filter(s => s.state === 'need').length, n = app.length;
+  $('hd').innerHTML = calm ? 'nothing running' : `<b>${n} active</b>${need ? ` · ${need} need${need === 1 ? 's' : ''} you` : ''}`;
   more.textContent = term ? `${sess.classList.contains('showterm') ? '−' : '+'}${term} terminal` : '';
 
   island.classList.toggle('asking', asking.length > 0);
@@ -272,17 +256,23 @@ function renderAsk(s, waiting) {
   if (!s) return;
   const a = s.ask, send = choice => { shown = null; window.loupe.answer(a.req, choice); };
 
-  const who = el('div', 'who', [s.name, step(s)].filter(Boolean).join(' › '));
-  const t = el('span', 't');
-  t.innerHTML = `<svg class="i"><use href="#${a.kind === 'question' ? 'ask' : ICON[a.tool] || 'run'}"/></svg>`;
-  if (a.kind === 'perm' && !ICON[a.tool]) t.append(a.tool);
-  who.append(t, el('span', 'sp'), el('span', 'wait', waiting > 0 ? `+${waiting} waiting` : ''));
+  const who = el('div', 'who');
+  who.append(el('b', '', s.name), ...(step(s) ? [el('span', 'st', step(s))] : []));
+  if (a.kind === 'perm') { // the tool, as its icon or its name
+    const t = el('span', 't');
+    t.innerHTML = `<svg class="i" style="width:13px;height:13px"><use href="#${ICON[a.tool] || 'run'}"/></svg>`;
+    if (!ICON[a.tool]) t.append(a.tool);
+    who.append(t);
+  }
+  who.append(el('span', 'sp'), el('span', 'wait', waiting > 0 ? `+${waiting} waiting` : ''));
   const inApp = el('button', 'link');
-  inApp.innerHTML = '<svg class="i" style="width:12px;height:12px"><use href="#out"/></svg>in app';
+  inApp.title = 'Answer in Claude';
+  inApp.innerHTML = '<svg class="i" style="width:13px;height:13px"><use href="#out"/></svg>';
   inApp.onclick = () => { if (a.req) send('app'); window.loupe.open(s.id); };
   // ×: close the card here. A held ask goes back to Claude Code, which then asks in the thread
-  const close = el('button', 'link', '×');
+  const close = el('button', 'link');
   close.title = 'Dismiss';
+  close.innerHTML = '<svg class="i" style="width:13px;height:13px"><use href="#x"/></svg>';
   close.onclick = () => { dismissed.add(key); if (a.req) send('app'); shown = null; render(last); };
   who.append(inApp, close);
   askEl.append(who);
@@ -324,7 +314,9 @@ function renderAsk(s, waiting) {
   });
   const submit = btn(a.req ? 'Submit' : 'Submit in app', 'pri', () => { if (!done()) return; if (a.req) send(answers()); else window.loupe.open(s.id); });
   submit.disabled = true;
-  askEl.append(submit);
+  const ft = el('div', 'btns');
+  ft.append(submit);
+  askEl.append(ft);
 }
 
 // --- open / close: the island morphs between its two sizes, content fades in on top

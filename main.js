@@ -15,8 +15,8 @@ const W = 760, H = 460;
 const sessions = new Map();
 const pending = new Map(); // req -> { sock, ev }: hooks waiting for an answer
 let seq = 0, lastEvent = 0;
-// Claude's own window is in front: its questions go straight to the thread and LOUPE stays quiet. A question LOUPE
-// is holding goes back to the thread the moment you switch to Claude, so you answer it in whichever place you go to.
+// Claude's own window is in front: new questions go straight to the thread and LOUPE stays quiet. A question LOUPE
+// already holds stays answerable here (its card has "in app" to send it to the thread instead).
 let claudeFront = false;
 let win, tray;
 
@@ -90,7 +90,7 @@ function setFront(on) {
   if (on === claudeFront) return;
   claudeFront = on;
   if (process.env.LOUPE_SNAP) console.log('claude in front:', on);
-  if (on && pending.size) release(); else push();
+  push();
 }
 // every held prompt back to Claude Code, which then asks in the thread. The card stays, mirrored.
 function release() {
@@ -276,7 +276,7 @@ app.whenReady().then(() => {
   ipcMain.on('hover', (_, on) => {
     win.setIgnoreMouseEvents(!on, { forward: true });
     clearInterval(hoverPoll); hoverPoll = null;
-    if (on) hoverPoll = setInterval(() => {
+    if (on && !process.env.LOUPE_NOPOLL) hoverPoll = setInterval(() => { // LOUPE_NOPOLL: dev snaps with a synthetic hover
       const p = screen.getCursorScreenPoint(), b = win.getBounds();
       if (p.x < b.x || p.y < b.y || p.x >= b.x + b.width || p.y >= b.y + b.height) win.webContents.send('leave');
     }, 300);

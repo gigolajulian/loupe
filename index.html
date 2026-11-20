@@ -24,7 +24,7 @@
   .goo-on.gooing .goo { filter: url(#goo); }
   .goo > div { position: absolute; background: rgb(16,17,20); }
   .goo .main { inset: 0; border-radius: 0 0 16px 16px; transition: border-radius .5s cubic-bezier(.32,.72,0,1); }
-  .wrap:has(.open) .goo .main { border-radius: 0 0 22px 22px; }
+  .wrap:has(.open) .goo .main { border-radius: 0 0 18px 18px; }
   .goo .drop { left: 50%; top: 0; width: 30px; height: 30px; margin-left: -15px; border-radius: 50%; opacity: 0; }
   /* html.dock: hangs from the bottom edge of the screen above the main one and grows upward. Solid, so it reads
      over any title bar. The goo layer is flipped, so the drop rises; it reaches 20px below the screen edge instead. */
@@ -35,21 +35,20 @@
   .dock .goo > div { background: #050506; }
   .island .tile { background: rgba(255,255,255,.05); }
   .island .code { background: rgba(0,0,0,.25); }
-  .island .r.go:hover { background: rgba(255,255,255,.06); }
-  .island .r.need { background: rgba(95,195,211,.10); }
+  .island .r.go:hover { background: rgba(255,255,255,.045); }
+  .island .r.need { background: rgba(95,195,211,.08); }
   .mini { display: flex; gap: 10px; align-items: center; }
-  .body { display: none; gap: 10px; align-items: stretch; padding: 4px 0 4px; min-height: 112px; }
-  .island.open { border-radius: 0 0 22px 22px; padding: 10px 14px 14px; }
+  /* open: one narrow column. A small orb sits in the header line, the rest is the card or the list */
+  .body { display: none; flex-direction: column; gap: 2px; width: 404px; }
+  .island.open { border-radius: 0 0 18px 18px; padding: 8px; }
   .island.open .mini { display: none; }
   .island.open .body { display: flex; }
 
   .tile { background: var(--tile); border-radius: 14px; padding: 12px; }
-  .mark { width: 96px; display: grid; place-items: center; }
-  .island.calm .body { min-height: 0; }
-  .island.calm .mark { width: 52px; }
-  .island.calm #orb-l { width: 40px !important; height: 40px !important; }
-  .island.calm .r { grid-template-columns: 1fr auto; align-items: baseline; gap: 12px; padding-block: 4px; }
-  .island.calm .sess { gap: 0; }
+  .mark { position: absolute; top: 11px; left: 14px; width: 18px; height: 18px; display: grid; place-items: center; }
+  .hd { padding: 3px 36px 6px 28px; font: 11px "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hd b { color: var(--fg); font-weight: 500; }
+  .island.asking .hd { display: none; }
   canvas { display: block; }
   .verb { font: 12px "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; color: var(--fg); max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .verb.need { color: var(--accent); }
@@ -57,58 +56,69 @@
   .proj:empty { display: none; }
   .proj + .verb { color: var(--dim); }
   .proj + .verb.need { color: var(--accent); }
-  .sess { display: grid; gap: 2px; width: 400px; align-content: start; }
-  .r { display: grid; gap: 3px; min-width: 0; padding: 7px 10px; border-radius: 10px; }
+  /* two columns of projects: status dot and name, steps, what it's doing underneath */
+  .sess { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 2px; align-content: start; }
+  .r { display: grid; grid-template-columns: 6px minmax(0, 1fr); column-gap: 9px; row-gap: 1px; align-items: center; min-width: 0; padding: 6px 8px; border-radius: 9px; }
+  .r::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--fg); }
+  .r.quiet::before { background: var(--faint); }
+  .r.need::before { background: var(--accent); }
   .r .st { flex: 1; min-width: 0; color: var(--faint); font: 11px "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .r .st span { display: inline-block; max-width: 12ch; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
   .r .st .on { color: var(--fg); }
   .r .st .need { color: var(--accent); }
-  .r .n { flex: 0 1 auto; max-width: 170px; font-weight: 600; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .r .top { display: flex; align-items: baseline; gap: 10px; min-width: 0; }  .r .v { color: var(--dim); font: 11px "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .r .n { flex: 0 1 auto; font-weight: 500; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .r .top { display: flex; align-items: baseline; gap: 8px; min-width: 0; flex: 0 1 auto; }
+  .r .v { grid-column: 2; color: var(--faint); font: 11px "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .r.go:hover { background: #151517; }
   .r.need { background: #0f1517; }
   .r.need .v { color: var(--accent); }
   .r.quiet .n, .r.quiet .v { color: var(--faint); }
   .r.term { display: none; }
-  .sess.showterm .r.term { display: flex; }
-  .more { color: var(--faint); font-size: 11px; text-align: center; padding-top: 4px; cursor: default; }
+  .sess.showterm .r.term { display: grid; }
+  .more { grid-column: 1 / -1; color: var(--faint); font-size: 11px; text-align: center; padding-top: 4px; cursor: default; }
   .more:empty { display: none; }
   svg.i { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; display: block; }
 
   /* ask card: permission or question */
-  .ask { width: 400px; display: none; flex-direction: column; gap: 10px; }
+  .ask { display: none; flex-direction: column; gap: 2px; }
   .island.asking .ask { display: flex; }
   .island.asking .sess { display: none; }
-  .who { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 12.5px; }
-  .who .t { color: var(--accent); display: flex; align-items: center; gap: 6px; font-weight: 400; }
+  /* header line beside the small orb: project and step in mono, icon buttons on the right */
+  .who { display: flex; align-items: center; gap: 8px; padding: 0 30px 4px 28px; min-height: 26px;
+         font: 11px "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; color: var(--dim); white-space: nowrap; }
+  .who b { color: var(--fg); font-weight: 500; overflow: hidden; text-overflow: ellipsis; }
+  .who .st { overflow: hidden; text-overflow: ellipsis; }
+  .who .t { color: var(--accent); display: flex; align-items: center; gap: 6px; }
   .who .sp { flex: 1; }
-  .code { font: 12px/1.6 "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; background: #0a0a0b; border-radius: 8px; padding: 8px 10px;
+  .code { font: 12px/1.6 "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; background: rgba(0,0,0,.25); border-radius: 8px; padding: 8px 10px; margin: 0 6px;
           white-space: pre-wrap; word-break: break-all; max-height: 120px; overflow: hidden; }
-  .q { font-size: 14px; font-weight: 600; }
-  /* square hairline controls; the one accent marks the default action */
-  .btns { display: flex; gap: 6px; }
-  .btn { font: 500 12px var(--sans); color: var(--fg); background: none; border: 1px solid rgba(255,255,255,.16); border-radius: 0; padding: 7px 12px; flex: 1; cursor: default; }
-  .btn:hover { border-color: rgba(255,255,255,.4); }
-  .btn.pri { color: var(--accent); border-color: var(--accent); }
-  .btn.pri:hover { background: rgba(95,195,211,.10); }
-  .btn:disabled { opacity: .35; pointer-events: none; }
-  /* question options: a numbered list, one hairline per row */
-  .opts { display: grid; border-top: 1px solid rgba(255,255,255,.1); }
-  .opt { display: flex; align-items: baseline; gap: 10px; min-width: 0; padding: 7px 2px; font: 12.5px var(--sans); color: var(--fg); text-align: left;
-         background: none; border: 0; border-bottom: 1px solid rgba(255,255,255,.1); cursor: default; }
-  .opt .k { font: 11px "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; color: var(--faint); }
-  .opt .l { font-weight: 600; white-space: nowrap; }
-  .opt .d { flex: 1; min-width: 0; color: var(--dim); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .opt .rec { font: 10px "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; color: var(--accent); }
-  .opt:hover .l, .opt:hover .k, .opt.sel .l, .opt.sel .k { color: var(--accent); }
-  .link { color: var(--faint); font-size: 11px; white-space: nowrap; display: flex; align-items: center; gap: 4px; background: none; border: 0; cursor: default; }
-  .link:hover { color: var(--dim); }
-  .wait { color: var(--faint); font-size: 11px; }
+  .q { font-size: 13.5px; font-weight: 500; line-height: 1.35; padding: 2px 6px 6px; text-wrap: balance; }
+  /* soft pills, right aligned; the filled accent one is the default action */
+  .btns { display: flex; gap: 6px; justify-content: flex-end; padding: 6px 4px 0; }
+  .btn { font: 500 12px var(--sans); color: var(--fg); background: rgba(255,255,255,.07); border: 0; border-radius: 999px; padding: 6px 14px; cursor: default; }
+  .btn:hover { background: rgba(255,255,255,.12); }
+  .btn.pri { color: #061214; background: var(--accent); }
+  .btn.pri:hover { background: #79d3e0; }
+  .btn:disabled, .btn.pri:disabled { background: rgba(255,255,255,.07); color: var(--faint); pointer-events: none; }
+  /* question options: soft rows that fill on hover, the description under the label */
+  .opts { display: grid; }
+  .opt { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; column-gap: 8px; align-items: baseline; padding: 6px; border-radius: 9px;
+         font: 12.5px var(--sans); color: var(--fg); text-align: left; background: none; border: 0; cursor: default; }
+  .opt:hover { background: rgba(255,255,255,.045); }
+  .opt .k { font: 10.5px "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; color: var(--faint); }
+  .opt .l { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .opt .d { grid-column: 2 / -1; grid-row: 2; color: var(--faint); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .opt .d:empty { display: none; }
+  .opt .rec { grid-column: 3; grid-row: 1; font: 10px "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; color: var(--accent); opacity: .8; }
+  .opt.sel { background: rgba(95,195,211,.09); }
+  .opt.sel .l, .opt.sel .k { color: var(--accent); }
+  .link { color: var(--faint); width: 22px; height: 22px; display: grid; place-items: center; border-radius: 6px; background: none; border: 0; cursor: default; flex: none; }
+  .link:hover { color: var(--fg); background: rgba(255,255,255,.06); }
+  .wait { color: var(--faint); }
 
   /* sound: speaker at the open panel's top right; click shows the volume slider beside it */
   .island { position: relative; }
-  .vol { position: absolute; top: 8px; right: 12px; display: flex; flex-direction: row-reverse; align-items: center; gap: 6px; }
-  .sess, .ask { padding-top: 18px; } /* clear the speaker */
+  .vol { position: absolute; top: 10px; right: 12px; display: flex; flex-direction: row-reverse; align-items: center; gap: 6px; }
   #volume { display: none; }
   .vol.show #volume { display: block; }
   .mute { background: none; border: 0; padding: 2px; color: var(--dim); display: grid; cursor: default; }
@@ -155,12 +165,11 @@
   .notch .island:not(.open) canvas { filter: drop-shadow(0 0 2px rgba(0,0,0,.6)); }
   .notch .island.idle .mini { grid-template-columns: var(--notch-w); }
   .notch .island.idle .side, .notch .island.idle .verb { display: none; }
-  .notch .island.open { padding: calc(var(--notch-h) + 6px) 14px 10px; text-shadow: 0 1px 2px rgba(0,0,0,.5); }
+  .notch .island.open { padding: calc(var(--notch-h) + 6px) 8px 8px; text-shadow: 0 1px 2px rgba(0,0,0,.5); }
   .notch .vol { top: calc(var(--notch-h) + 8px); }
+  .notch .mark { top: calc(var(--notch-h) + 9px); }
   /* slim: no fixed panel height, a smaller orb */
-  .notch .island.open .body { min-height: 0; padding: 0; }
-  .notch .island.open:not(.calm) .mark { width: 64px; }
-  .notch .island.open:not(.calm) #orb-l { width: 52px !important; height: 52px !important; }
+  .notch .island.open .body { padding: 0; }
   /* open, the panel drops from the top edge as glass under the menu bar, which stays readable on top.
      The frosted material is a native vibrancy window behind this one (main.js 'glass'). */
   .notch .goo .main { transition: border-radius .5s cubic-bezier(.32,.72,0,1), top .5s cubic-bezier(.32,.72,0,1), background-color .3s; }
@@ -177,6 +186,7 @@
   <symbol id="edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol>
   <symbol id="run" viewBox="0 0 24 24"><path d="M4 17l6-6-6-6M12 19h8"/></symbol>
   <symbol id="ask" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/></symbol>
+  <symbol id="x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
   <symbol id="out" viewBox="0 0 24 24"><path d="M7 17L17 7M8 7h9v9"/></symbol>
   <symbol id="vol" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></symbol>
   <symbol id="muted" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4zM22 9l-6 6M16 9l6 6"/></symbol>
@@ -187,8 +197,9 @@
 <div class="island empty" id="island">
   <div class="mini"><span class="side"><canvas id="orb-s" data-size="20" data-px="26"></canvas><span class="proj" id="proj"></span></span><i class="gap"></i><span class="verb" id="verb"></span></div>
   <div class="body">
-    <div class="mark"><canvas id="orb-l" data-size="64" data-px="80"></canvas></div>
+    <div class="mark"><canvas id="orb-l" data-size="20" data-px="18"></canvas></div>
     <div class="vol"><button class="mute" id="mute" aria-label="Volume"><svg class="i"><use href="#vol"/></svg></button><input type="range" id="volume" min="0" max="1" step="0.05" aria-label="Volume"></div>
+    <div class="hd" id="hd"></div>
     <div class="sess" id="sess"><div class="more" id="more"></div></div>
     <div class="ask" id="card"></div>
   </div>
