@@ -20,6 +20,9 @@
   .goo { position: absolute; inset: -20px 0 0 0; pointer-events: none; opacity: .58; transition: opacity .5s; }
   .wrap:has(.idle) .goo { opacity: .34; }
   .wrap:has(.open) .goo { opacity: .93; }
+  /* tray Glass (#10): dark keeps tab text under it from reading through, solid shows nothing */
+  .glass-dark .goo { opacity: .82; } .glass-dark .wrap:has(.idle) .goo { opacity: .6; } .glass-dark .wrap:has(.open) .goo { opacity: .95; }
+  .glass-solid .goo, .glass-solid .wrap:has(.idle) .goo, .glass-solid .wrap:has(.open) .goo { opacity: 1; }
   /* blur + alpha threshold: shapes that touch melt together. Only while the drop moves: at rest it softens the straight sides */
   .goo-on.gooing .goo { filter: url(#goo); }
   .goo > div { position: absolute; background: rgb(16,17,20); }
@@ -73,6 +76,11 @@
   .r.need { background: #0f1517; }
   .r.need .v { color: var(--accent); }
   .r.quiet .n, .r.quiet .v { color: var(--faint); }
+  .r.quiet::before { background: #3a3a40; }
+  .r.quiet.first { grid-column-start: 1; }
+  .r.quiet.first, .r.quiet.first + .r.quiet { margin-top: 6px; } /* recent idle sessions start their own line */
+  .r.new::before { background: none; box-shadow: inset 0 0 0 1.2px var(--dim); }
+  .r.new .v { color: var(--dim); }
   .r.term { display: none; }
   .sess.showterm .r.term { display: grid; }
   .more { grid-column: 1 / -1; color: var(--faint); font-size: 11px; text-align: center; padding-top: 4px; cursor: default; }
@@ -106,8 +114,14 @@
          font: 12.5px var(--sans); color: var(--fg); text-align: left; background: none; border: 0; cursor: default; }
   .opt:hover { background: rgba(255,255,255,.045); }
   .opt .k { font: 10.5px "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; color: var(--faint); }
-  .opt .l { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .opt .d { grid-column: 2 / -1; grid-row: 2; color: var(--faint); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* options wrap to three lines (#11), so the whole choice reads without the app */
+  .opt .l { font-weight: 500; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+  .opt .d { grid-column: 2 / -1; grid-row: 2; color: var(--faint); font-size: 11.5px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+  /* Other: a text box under the row, shown once Other is picked */
+  textarea.other { display: none; margin: 4px 6px 2px 30px; resize: none; font: 13px/1.4 var(--sans); color: var(--fg); background: rgba(0,0,0,.3);
+    border: 0; border-radius: 8px; padding: 8px 10px; outline: none; }
+  textarea.other:focus { box-shadow: inset 0 0 0 1px rgba(95,195,211,.5); }
+  .opts.typing textarea.other { display: block; }
   .opt .d:empty { display: none; }
   .opt .rec { grid-column: 3; grid-row: 1; font: 10px "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; color: var(--accent); opacity: .8; }
   .opt.sel { background: rgba(95,195,211,.09); }

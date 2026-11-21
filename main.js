@@ -115,7 +115,8 @@ function listen() {
         try { ev = JSON.parse(line); } catch { continue; }
         lastEvent = Date.now();
         // away, or Claude in front: straight to the thread, mirrored
-        if (ev.orb_wait && (away() || claudeFront)) { ev.orb_wait = false; sock.end('null\n'); }
+        // LOUPE_HOLD=1 (dev): hold anyway, to test the card while Claude is in front
+        if (ev.orb_wait && !process.env.LOUPE_HOLD && (away() || claudeFront)) { ev.orb_wait = false; sock.end('null\n'); }
         if (ev.orb_wait) {
           const req = ev.orb_req = String(++seq);
           pending.set(req, { sock, ev });
@@ -264,8 +265,8 @@ app.whenReady().then(() => {
   ipcMain.on('glass', (_, r) => {
     if (!glass) return;
     if (!r) return glass.hide();
-    const o = win.getBounds();
-    glass.setBounds({ x: Math.round(o.x + r.x), y: Math.round(o.y + r.y), width: Math.round(r.w), height: Math.round(r.h) });
+    const o = win.getBounds(), z = win.webContents.getZoomFactor(); // renderer px are CSS px: scale by the Size zoom
+    glass.setBounds({ x: Math.round(o.x + r.x * z), y: Math.round(o.y + r.y * z), width: Math.round(r.w * z), height: Math.round(r.h * z) });
     if (!glass.isVisible()) { glass.showInactive(); win.moveTop(); }
   });
 
@@ -336,13 +337,29 @@ app.whenReady().then(() => {
     const up = !MAC && cfg.where === 'above' && screen.getAllDisplays().map(x => x.bounds)
       .find(b => b.y + b.height === p.y && b.x < p.x + p.width && b.x + b.width > p.x);
     const d = up || p;
-    win.setBounds({ x: Math.round(d.x + (d.width - W) / 2), y: up ? d.y + d.height - H : d.y, width: W, height: H });
+    // cfg.dx: where the island was dragged to, from the centre (#10). Clamped so the open panel stays on screen.
+    const lim = d.width / 2 - 230, dx = MAC ? 0 : Math.max(-lim, Math.min(lim, cfg.dx || 0));
+    win.setBounds({ x: Math.round(d.x + (d.width - W) / 2 + dx), y: up ? d.y + d.height - H : d.y, width: W, height: H });
     return !!up;
   };
   screen.on('display-added', () => { place(); sendCfg(); });
   screen.on('display-removed', () => { place(); sendCfg(); });
   screen.on('display-metrics-changed', () => { place(); sendCfg(); });
-  const sendCfg = () => win.webContents.send('config', { ...cfg, dock: place() });
+  const sendCfg = () => {
+    if (!MAC) win.webContents.setZoomFactor(cfg.size === 'small' ? 0.85 : 1); // tray Size (#10); the notch keeps its fit
+    win.webContents.send('config', { ...cfg, dock: place() });
+  };
+  const saveCfg = () => fs.writeFileSync(cfgPath, JSON.stringify(cfg));
+  // Windows: drag the island sideways along its edge (#10). dx is the cursor travel since the press.
+  let dragFrom = 0;
+  ipcMain.on('drag', (_, { phase, dx }) => {
+    if (MAC) return;
+    if (phase === 'start') dragFrom = cfg.dx || 0;
+    cfg.dx = dragFrom + dx * win.webContents.getZoomFactor(); place(); // dx is in CSS px
+    if (phase === 'end') saveCfg();
+  });
+  // Other on a question card: take the keyboard while typing, then give it back
+  ipcMain.on('focus', (_, on) => { if (win.isDestroyed()) return; win.setFocusable(on); if (on) win.focus(); });
   win.webContents.on('did-finish-load', sendCfg);
   // Mac: after sleep the panel can stop drawing while events still arrive. Reload it on wake, on unlock and if
   // its renderer dies; the sessions live here in main, so nothing is lost.
@@ -362,6 +379,13 @@ app.whenReady().then(() => {
       label, type: 'radio', checked: (cfg.where || 'top') === v,
       click: () => { cfg.where = v; fs.writeFileSync(cfgPath, JSON.stringify(cfg)); sendCfg(); menu(); },
     })) }]),
+    { label: 'Glass', submenu: [['clear', 'Clear'], ['dark', 'Dark'], ['solid', 'Solid']].map(([v, label]) => ({
+      label, type: 'radio', checked: (cfg.glass || 'dark') === v, click: () => { cfg.glass = v; saveCfg(); sendCfg(); menu(); },
+    })) },
+    ...(MAC ? [] : [{ label: 'Size', submenu: [['small', 'Small'], ['normal', 'Normal']].map(([v, label]) => ({
+      label, type: 'radio', checked: (cfg.size || 'normal') === v, click: () => { cfg.size = v; saveCfg(); sendCfg(); menu(); },
+    })) }]),
+    ...(MAC ? [] : [{ label: 'Reset position', enabled: !!cfg.dx, click: () => { cfg.dx = 0; saveCfg(); place(); menu(); } }]),
     { label: 'Close after hover', submenu: [0, 150, 300, 600, 1000, 2000, 5000].map(ms => ({
       label: ms ? `${ms / 1000} s` : 'Instant', type: 'radio', checked: cfg.closeDelay === ms,
       click: () => { cfg.closeDelay = ms; fs.writeFileSync(cfgPath, JSON.stringify(cfg)); sendCfg(); menu(); },

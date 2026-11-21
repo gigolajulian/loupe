@@ -48,6 +48,7 @@ function verb(s) {
       if (s.step === 'run') return `running ${d.split(' ')[0]}`;
       return 'working';
     case 'done': return 'done';
+    case 'ready': return 'ready';
     case 'err': return 'stopped';
     default: return `idle ${ago(s.ts)}`;
   }
@@ -67,59 +68,99 @@ orbs.forEach(c => {
   c._ctx = c.getContext('2d');
 });
 const reduce = matchMedia('(prefers-reduced-motion: reduce)');
-const t0 = performance.now();
+// #5 #6 #11: a new mode morphs in over BLEND and holds at least HOLD, so quick tool hops read as one movement.
+// Waking from idle, the mark unfolds and the speed eases up from rest over EASE_IN. Needs-you pulses at WAIT speed.
+// Idle, the mark drifts a fraction of a pixel. Values picked in the issue mock (2026-11-21).
+const BLEND = 400, HOLD = 600, EASE_IN = 900, WAIT = 0.45, DRIFT = 0.5;
 let cur = look(null), rgb = [...INK.dim];
+let from = null, blendAt = 0, next = null, switchedAt = -1e9, rate = 1, clock = 0;
 let fold = 1, foldTo = 1; // 0 = orb, 1 = LOUPE mark (three dots, cyan centre, as in logo/icons.mjs)
 const MARK = [INK.white, INK.cyan, INK.white];
+const key = l => [l.anim, l.ink, !!l.still, !!l.logo].join();
+function setLook(l) { if (key(l) !== key(next || cur)) { next = l; kick(); } }
 
-function draw(c, t) {
+const frameOf = (l, size, t) => {
+  const { mode, speed, opts } = resolvePreset(l.anim, size);
+  return MODE_FRAMES[mode](size, t * speed, l.opts ? { ...opts, ...l.opts } : opts);
+};
+function draw(c, t, w, now) {
   const size = +c.dataset.size;
-  const { mode, speed, opts } = resolvePreset(cur.anim, size);
-  const f = MODE_FRAMES[mode](size, t * speed, cur.opts ? { ...opts, ...cur.opts } : opts);
+  const fb = frameOf(cur, size, t), fa = from ? frameOf(from, size, t) : null;
   const [r, g, b] = rgb.map(Math.round), ctx = c._ctx;
   const m = fold * fold * (3 - 2 * fold); // smoothstep
   const s = Math.max(0, (m - 0.6) / 0.4); // solid mark fades in over the last 40%
   ctx.setTransform(c._k, 0, 0, c._k, 0, 0);
   ctx.clearRect(0, 0, size, size);
-  if (m < 1) for (const l of f.lines || []) {
-    ctx.strokeStyle = `rgba(${r},${g},${b},${(1 - l.white) * (l.a ?? 1) * (1 - m)})`;
+  const lines = (f, k) => { for (const l of f.lines || []) {
+    ctx.strokeStyle = `rgba(${r},${g},${b},${(1 - l.white) * (l.a ?? 1) * k * (1 - m)})`;
     ctx.lineWidth = l.w;
     ctx.beginPath(); ctx.moveTo(l.x1, l.y1); ctx.lineTo(l.x2, l.y2); ctx.stroke();
+  } };
+  if (m < 1) { lines(fb, fa ? w : 1); if (fa) lines(fa, 1 - w); }
+  // blending: dots pair up by index and slide from the old mode's spot to the new one's; unpaired ones fade
+  const al = d => (1 - d.white) * (d.a ?? 1);
+  let dots = fb.dots;
+  if (fa) {
+    dots = [];
+    for (let i = 0; i < Math.max(fa.dots.length, fb.dots.length); i++) {
+      const p = fa.dots[i], q = fb.dots[i];
+      dots.push(p && q ? { x: p.x + (q.x - p.x) * w, y: p.y + (q.y - p.y) * w, r: p.r + (q.r - p.r) * w, al: al(p) * (1 - w) + al(q) * w }
+        : p ? { ...p, al: al(p) * (1 - w) } : { ...q, al: al(q) * w });
+    }
   }
   // each dot slides to the mark dot of its third, left to right, and takes that dot's size and color
-  const rank = new Map(f.dots.map((d, i) => [d, i]).sort((a, b) => a[0].x - b[0].x).map(([d], i) => [d, i]));
-  for (const d of f.dots) {
-    const k = Math.min(2, Math.floor(rank.get(d) * 3 / f.dots.length)), ink = MARK[k];
-    const a = (1 - d.white) * (d.a ?? 1);
+  const rank = new Map(dots.map((d, i) => [d, i]).sort((a, b) => a[0].x - b[0].x).map(([d], i) => [d, i]));
+  for (const d of dots) {
+    const k = Math.min(2, Math.floor(rank.get(d) * 3 / dots.length)), ink = MARK[k];
+    const a = d.al ?? al(d);
     const x = d.x + (size / 2 + (k - 1) * size * 0.34 - d.x) * m, y = d.y + (size / 2 - d.y) * m;
     const [cr, cg, cb] = [r, g, b].map((v, i) => Math.round(v + (ink[i] - v) * m));
     ctx.fillStyle = `rgba(${cr},${cg},${cb},${a * (1 - s)})`;
-    ctx.beginPath(); ctx.arc(x, y, d.r + (size * 0.14 - d.r) * m, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x, y, Math.max(0, d.r + (size * 0.14 - d.r) * m), 0, Math.PI * 2); ctx.fill();
   }
-  // stacked translucent dots read muddy, so the last stretch hands over to three solid circles
+  // stacked translucent dots read muddy, so the last stretch hands over to three solid circles. Idle, they drift
+  // on their own slow cycles and the centre one breathes a little.
+  const drift = reduce.matches ? 0 : DRIFT, ts = now / 1000;
   if (s > 0) MARK.forEach((ink, k) => {
-    ctx.fillStyle = `rgba(${ink.join(',')},${s})`;
-    ctx.beginPath(); ctx.arc(size / 2 + (k - 1) * size * 0.34, size / 2, size * 0.14, 0, Math.PI * 2); ctx.fill();
+    const dy = drift * size * 0.035 * Math.sin(ts * 2 * Math.PI / 6 + k * 2.1);
+    const a = k === 1 ? 1 - drift * 0.25 * (0.5 + 0.5 * Math.sin(ts * 2 * Math.PI / 5)) : 1;
+    ctx.fillStyle = `rgba(${ink.join(',')},${s * a})`;
+    ctx.beginPath(); ctx.arc(size / 2 + (k - 1) * size * 0.34, size / 2 + dy, size * 0.14, 0, Math.PI * 2); ctx.fill();
   });
 }
 
-// frames run only while the orb moves or its ink is easing; a still orb costs nothing between kicks
-let raf = 0, lastDraw = 0;
+// frames run only while the orb moves, blends, eases or drifts; a still orb costs nothing between kicks.
+// Drifting alone runs at 15 fps, the rest at 30.
+let raf = 0, lastDraw = 0, slow = false;
 function frame(now) {
   raf = 0;
-  if (now - lastDraw < 30) { raf = requestAnimationFrame(frame); return; } // 30 fps is plenty for a 26 px orb
+  if (now - lastDraw < (slow ? 66 : 30)) { raf = requestAnimationFrame(frame); return; }
+  const dt = Math.min(0.1, (now - lastDraw) / 1000);
   lastDraw = now;
+  if (next && now - switchedAt >= HOLD) {
+    // blend between two dotted modes; to and from the mark, the fold does the morph
+    if (next.anim !== cur.anim && !cur.logo && !next.logo && !reduce.matches) { from = cur; blendAt = now; }
+    if (cur.logo && !next.logo) rate = 0; // waking from idle
+    cur = next; next = null; switchedAt = now;
+  }
+  const w = from ? Math.min(1, (now - blendAt) / BLEND) : 1;
   const want = INK[cur.ink];
   rgb = rgb.map((v, i) => v + (want[i] - v) * 0.16); // ink eases to the new color over ~0.5 s at 30 fps
   const settled = rgb.every((v, i) => Math.abs(v - want[i]) < 0.5);
   if (settled) rgb = [...want];
   foldTo = cur.logo ? 1 : 0;
-  fold = reduce.matches ? foldTo : fold + Math.sign(foldTo - fold) * Math.min(Math.abs(foldTo - fold), 1 / 18); // ~0.6 s at 30 fps
+  const fstep = dt / (foldTo ? 0.6 : EASE_IN / 1000); // folds in 0.6 s, unfolds over EASE_IN
+  fold = reduce.matches ? foldTo : fold + Math.sign(foldTo - fold) * Math.min(Math.abs(foldTo - fold), fstep);
+  rate = reduce.matches ? 1 : Math.min(1, rate + dt * 1000 / EASE_IN);
   const folding = fold !== foldTo;
-  const still = (cur.still && !folding) || reduce.matches;
-  const t = still ? 2 : (performance.now() - t0) / 1000;
-  for (const c of orbs) if (c.offsetParent) draw(c, t); // hidden canvas: skip
-  if (!still || !settled || folding) raf = requestAnimationFrame(frame);
+  const still = (cur.still && !folding && !from) || reduce.matches;
+  if (!still) clock += dt * (cur.anim === 'listening' ? WAIT : 1) * rate * rate;
+  const drifting = cur.logo && !folding && !reduce.matches;
+  for (const c of orbs) if (c.offsetParent) draw(c, still ? 2 : clock, w * w * (3 - 2 * w), now); // hidden canvas: skip
+  if (w >= 1) from = null;
+  const busy = !still || !settled || folding || from || next;
+  slow = !busy && drifting;
+  if (busy || drifting) raf = requestAnimationFrame(frame);
 }
 const kick = () => { if (!raf) raf = requestAnimationFrame(frame); };
 kick();
@@ -144,10 +185,11 @@ function sync(list) {
       r.innerHTML = '<div class="top"><span class="n"></span></div><div class="v"></div>';
       rows.set(s.id, r);
     }
-    r.onclick = () => window.loupe.open(s.id);
+    r.onclick = () => { if (!dragged) window.loupe.open(s.id); };
     const want = i === 0 ? sess.firstChild : rows.get(list[i - 1].id).nextSibling;
     if (r !== want) sess.insertBefore(r, want || more);
-    r.className = 'r' + (s.state === 'need' ? ' need' : '') + (s.desktop ? '' : ' term') + (s.host ? ' go' : '');
+    r.className = 'r' + (s.state === 'need' ? ' need' : s.state === 'ready' ? ' new' : active(s) ? '' : ' quiet')
+      + (!active(s) && s.state !== 'ready' && !(i && !active(list[i - 1]) && list[i - 1].state !== 'ready') ? ' first' : '') + (s.desktop ? '' : ' term') + (s.host ? ' go' : '');
     r.querySelector('.n').textContent = r.title = title(s);
     r.querySelector('.v').textContent = verb(s);
   });
@@ -169,17 +211,19 @@ function render(list) {
   // Claude in front: you answer there, so the panel doesn't pop open. The orb still shows "needs you".
   if (!closing) setOpen(hovered || (!claudeFront && (asking.length > 0 || list.some(s => s.state === 'need' && !s.ask))));
 
-  cur = look(list[0]);
-  kick();
+  const lk = look(list[0]);
+  setLook(lk);
   projEl.textContent = list[0] ? [list[0].name, step(list[0])].filter(Boolean).join(' › ') : '';
   verbEl.textContent = list[0] ? verb(list[0]) : '';
-  verbEl.classList.toggle('need', cur.ink === 'cyan');
+  verbEl.classList.toggle('need', lk.ink === 'cyan');
 
   const calm = !act.length;
   island.classList.toggle('calm', calm);
-  sync([...app.slice(0, 8), ...termS]);
+  // #8: new sessions show "ready" with the active ones; up to four recent idle ones sit under them, dimmed
+  const ready = list.filter(s => s.state === 'ready' && s.desktop), recent = list.filter(s => !active(s) && s.state !== 'ready' && s.desktop).slice(0, 4);
+  sync([...app.slice(0, 8), ...ready, ...termS, ...recent]);
   const need = act.filter(s => s.state === 'need').length, n = app.length;
-  $('hd').innerHTML = calm ? 'nothing running' : `<b>${n} active</b>${need ? ` · ${need} need${need === 1 ? 's' : ''} you` : ''}`;
+  $('hd').innerHTML = calm ? 'nothing running' : `<b>${n} active</b>${need ? ` · ${need} need${need === 1 ? 's' : ''} you` : ''}${ready.length ? ` · ${ready.length} ready` : ''}`;
   more.textContent = term ? `${sess.classList.contains('showterm') ? '−' : '+'}${term} terminal` : '';
 
   island.classList.toggle('asking', asking.length > 0);
@@ -252,6 +296,7 @@ function renderAsk(s, waiting) {
     return;
   }
   shown = key;
+  window.loupe.focus(false); // a new card or none: give the keyboard back
   askEl.replaceChildren();
   if (!s) return;
   const a = s.ask, send = choice => { shown = null; window.loupe.answer(a.req, choice); };
@@ -287,29 +332,44 @@ function renderAsk(s, waiting) {
     return;
   }
 
-  // pick, then Submit at the bottom. Held (you were at the PC): Submit answers here.
+  // pick, then Submit at the bottom. Held (you were at the PC): Submit answers here, and Other takes a typed answer.
   // Mirrored (you were away): only the thread can answer, so Submit opens the session there.
-  const picks = {};
-  const done = () => a.questions.every(q => picks[q.question] && picks[q.question].length);
-  const answers = () => Object.fromEntries(a.questions.map(q => [q.question, picks[q.question].join(', ')]));
-  const pick = (q, o, b) => {
+  const OTHER = '\0other', picks = {}, typed = {};
+  const val = (q, l) => (l === OTHER ? typed[q.question].value.trim() : l);
+  const done = () => a.questions.every(q => picks[q.question] && picks[q.question].length && picks[q.question].every(l => val(q, l)));
+  const answers = () => Object.fromEntries(a.questions.map(q => [q.question, picks[q.question].map(l => val(q, l)).join(', ')]));
+  const pick = (q, label, row) => {
     const cur = picks[q.question] || [];
-    picks[q.question] = !q.multiSelect ? [o.label] : cur.includes(o.label) ? cur.filter(x => x !== o.label) : [...cur, o.label];
-    b.parentNode.childNodes.forEach((x, j) => x.classList.toggle('sel', picks[q.question].includes(q.options[j].label)));
+    picks[q.question] = !q.multiSelect ? [label] : cur.includes(label) ? cur.filter(x => x !== label) : [...cur, label];
+    row.querySelectorAll('.opt').forEach(x => x.classList.toggle('sel', picks[q.question].includes(x.dataset.label)));
+    const other = picks[q.question].includes(OTHER);
+    row.classList.toggle('typing', other);
+    // typing needs keyboard focus, which LOUPE otherwise never takes; it gives it back on answer or dismiss
+    if (other && label === OTHER) { window.loupe.focus(true); typed[q.question].focus(); }
     submit.disabled = !done();
   };
   a.questions.forEach(q => {
     askEl.append(el('div', 'q', q.question));
     const row = el('div', 'opts');
+    const opt = (label, i, text, desc, rec) => {
+      const b = el('button', 'opt');
+      b.dataset.label = label;
+      b.append(el('span', 'k', String(i + 1)), el('span', 'l', text), el('span', 'd', desc || ''), ...(rec ? [el('span', 'rec', 'rec')] : []));
+      b.onclick = () => pick(q, label, row);
+      row.append(b);
+    };
     (q.options || []).forEach((o, i) => {
       const rec = /\s*\(Recommended\)\s*$/i.test(o.label);
-      const b = el('button', 'opt');
-      b.append(el('span', 'k', String(i + 1)), el('span', 'l', o.label.replace(/\s*\(Recommended\)\s*$/i, '')),
-        el('span', 'd', o.description || ''), ...(rec ? [el('span', 'rec', 'rec')] : []));
-      if (o.description) b.title = o.description;
-      b.onclick = () => pick(q, o, b);
-      row.append(b);
+      opt(o.label, i, o.label.replace(/\s*\(Recommended\)\s*$/i, ''), o.description, rec);
     });
+    if (a.req) {
+      opt(OTHER, (q.options || []).length, 'Other', 'Write your own answer');
+      const t = typed[q.question] = el('textarea', 'other');
+      t.rows = 2; t.placeholder = 'Type your answer';
+      t.oninput = () => { submit.disabled = !done(); };
+      t.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (done()) submit.click(); } };
+      row.append(t);
+    }
     askEl.append(row);
   });
   const submit = btn(a.req ? 'Submit' : 'Submit in app', 'pri', () => { if (!done()) return; if (a.req) send(answers()); else window.loupe.open(s.id); });
@@ -326,6 +386,8 @@ window.loupe.onConfig(c => {
   closeDelay = c.closeDelay; sound = c.sound;
   document.body.classList.toggle('goo-on', c.goo);
   document.documentElement.classList.toggle('dock', !!c.dock);
+  document.documentElement.classList.toggle('glass-dark', (c.glass || 'dark') === 'dark');
+  document.documentElement.classList.toggle('glass-solid', c.glass === 'solid');
   volEl.value = master.gain.value = c.volume;
   showSound();
 });
@@ -396,9 +458,28 @@ island.addEventListener('mouseleave', () => {
 });
 window.loupe.onLeave(() => island.dispatchEvent(new MouseEvent('mouseleave'))); // main saw the cursor outside the window
 more.addEventListener('click', () => sess.classList.toggle('showterm'));
+// Windows: press and drag the island to slide it along its edge (#10). Under 5 px of travel it stays a click.
+let dragged = false;
+if (!notch) island.addEventListener('pointerdown', e => {
+  if (e.button !== 0 || e.target.closest('button, input, textarea')) return;
+  const x0 = e.screenX, id = e.pointerId;
+  let moving = false;
+  const move = ev => {
+    const dx = ev.screenX - x0;
+    if (!moving && Math.abs(dx) < 5) return;
+    if (!moving) { moving = true; island.setPointerCapture(id); window.loupe.drag({ phase: 'start', dx: 0 }); }
+    window.loupe.drag({ phase: 'move', dx });
+  };
+  const up = ev => {
+    island.removeEventListener('pointermove', move); island.removeEventListener('pointerup', up); island.removeEventListener('pointercancel', up);
+    if (moving) { dragged = true; window.loupe.drag({ phase: 'end', dx: ev.screenX - x0 }); setTimeout(() => { dragged = false; }, 0); }
+  };
+  island.addEventListener('pointermove', move); island.addEventListener('pointerup', up); island.addEventListener('pointercancel', up);
+});
 // a click on the open panel (a session row included, which also jumps to it) folds it away. It stays shut until
 // the cursor leaves and comes back, since mouseenter only fires again then. A card waiting for an answer keeps it open.
 island.addEventListener('click', e => {
+  if (dragged) { dragged = false; return; } // the end of a drag, not a click
   if (!island.classList.contains('open') || e.target.closest('button, input, #card, #more') ||
     muteEl.parentElement.contains(e.target)) return;
   if (last.some(s => s.ask && !dismissed.has(askKey(s)))) return;

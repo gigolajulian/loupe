@@ -6,7 +6,7 @@ const STEP = {
   Edit: 'edit', Write: 'edit', MultiEdit: 'edit', NotebookEdit: 'edit',
   Bash: 'run', PowerShell: 'run',
 };
-const RANK = { need: 0, err: 1, work: 2, think: 3, done: 4, idle: 5 };
+const RANK = { need: 0, err: 1, work: 2, think: 3, ready: 4, done: 5, idle: 6 };
 const DONE_MS = 5000;
 const STALE_MS = 12 * 3600e3; // Code tab sessions rarely send SessionEnd
 const TEST_ID = 'loupe-test', TEST_MS = 10e3; // the README's install test clears itself
@@ -42,6 +42,9 @@ function apply(map, ev) {
   s.ts = ev.orb_ts || Date.now();
 
   switch (ev.hook_event_name) {
+    case 'SessionStart': // waiting on its first prompt (#8)
+      if (s.state === 'idle') s.state = 'ready';
+      break;
     case 'UserPromptSubmit':
       Object.assign(s, { state: 'think', steps: [], step: null, detail: '', desc: '', tool: '', ask: null });
       break;
@@ -117,6 +120,7 @@ if (require.main === module) {
   const assert = require('assert');
   const m = new Map();
   const e = (hook_event_name, x = {}) => apply(m, { session_id: 'a', cwd: 'C:\\P\\JG WEBSITE NEW', orb_entry: 'claude-desktop', hook_event_name, ...x });
+  e('SessionStart'); assert.equal(m.get('a').state, 'ready');
   e('UserPromptSubmit'); assert.equal(m.get('a').state, 'think');
   e('PreToolUse', { tool_name: 'Read', tool_input: { file_path: 'x' } });
   e('PreToolUse', { tool_name: 'Bash', tool_input: { command: 'npm test' } });

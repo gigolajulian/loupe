@@ -7,6 +7,8 @@ contextBridge.exposeInMainWorld('loupe', {
   onLeave: cb => ipcRenderer.on('leave', () => cb()),
   answer: (req, choice) => ipcRenderer.send('answer', { req, choice }),
   open: id => ipcRenderer.send('open', id),  onConfig: cb => ipcRenderer.on('config', (_, c) => cb(c)),
+  focus: on => ipcRenderer.send('focus', on), // Other's text box: take the keyboard while typing
+  drag: dx => ipcRenderer.send('drag', dx), // Windows: slide the island along the top edge
   setConfig: patch => ipcRenderer.send('config', patch),
   glass: rect => ipcRenderer.send('glass', rect),
   onMenubar: cb => ipcRenderer.on('menubar', (_, m) => cb(m)), // Mac: where app menus end and icons start
