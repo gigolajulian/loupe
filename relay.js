@@ -25,6 +25,7 @@ process.stdin.on('end', () => {
   ev.orb_entry = process.env.CLAUDE_CODE_ENTRYPOINT || 'cli';
   ev.orb_host = process.env.CLAUDE_CODE_HOST_SESSION_ID || ''; // Claude app session id, for claude:// links
   ev.orb_ts = Date.now();
+  ev.orb_ppid = process.ppid; // LOUPE walks up from here to the session's claude.exe, to group its background tasks
   // a held hook keeps its prompt out of the thread. Questions are always offered to LOUPE, which lets them go to
   // the thread at once when you're away from the PC; permissions wait only with the tray's "Answer permissions on LOUPE".
   ev.orb_wait = (ev.hook_event_name === 'PreToolUse' && ev.tool_name === 'AskUserQuestion') ||

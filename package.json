@@ -1,7 +1,7 @@
 {
   "name": "loupe",
   "productName": "LOUPE",
-  "version": "0.2.20",
+  "version": "0.3.0",
   "private": true,
   "description": "Top-of-screen island for Claude Code sessions",
   "author": "Julian Gigola",
@@ -24,12 +24,17 @@
       "sessions.js",
       "hooks.js",
       "relay.js",
+      "reap/reap.ps1",
+      "reap/allow.txt",
       "index.html",
       "icon.png",
       "icon@2x.png",
       "trayTemplate.png",
       "trayTemplate@2x.png",
       "package.json"
+    ],
+    "asarUnpack": [
+      "reap/**"
     ],
     "directories": {
       "output": "dist"

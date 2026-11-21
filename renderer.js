@@ -130,11 +130,11 @@ function draw(c, t, w, now) {
 }
 
 // frames run only while the orb moves, blends, eases or drifts; a still orb costs nothing between kicks.
-// Drifting alone runs at 15 fps, the rest at 30.
+// Drifting alone runs at 10 fps (a sub-pixel drift: 15 fps cost GPU for nothing you can see), the rest at 30.
 let raf = 0, lastDraw = 0, slow = false;
 function frame(now) {
   raf = 0;
-  if (now - lastDraw < (slow ? 66 : 30)) { raf = requestAnimationFrame(frame); return; }
+  if (now - lastDraw < (slow ? 100 : 30)) { raf = requestAnimationFrame(frame); return; }
   const dt = Math.min(0.1, (now - lastDraw) / 1000);
   lastDraw = now;
   if (next && now - switchedAt >= HOLD) {
@@ -182,7 +182,7 @@ function sync(list) {
     let r = rows.get(s.id);
     if (!r) {
       r = document.createElement('div');
-      r.innerHTML = '<div class="top"><span class="n"></span></div><div class="v"></div>';
+      r.innerHTML = '<div class="top"><span class="n"></span><span class="bg"></span></div><div class="v"></div>';
       rows.set(s.id, r);
     }
     r.onclick = () => { if (!dragged) window.loupe.open(s.id); };
@@ -192,6 +192,8 @@ function sync(list) {
       + (!active(s) && s.state !== 'ready' && !(i && !active(list[i - 1]) && list[i - 1].state !== 'ready') ? ' first' : '') + (s.desktop ? '' : ' term') + (s.host ? ' go' : '');
     r.querySelector('.n').textContent = r.title = title(s);
     r.querySelector('.v').textContent = verb(s);
+    const bg = bgCount(s.id);
+    r.querySelector('.bg').textContent = bg ? `${bg} bg` : '';
   });
 }
 
@@ -229,6 +231,7 @@ function render(list) {
   island.classList.toggle('asking', asking.length > 0);
   renderAsk(asking[0], asking.length - 1);
   cues(list);
+  renderProcs();
 }
 
 // --- audio cues, synthesized (picked in cues.html): N4 needs you, D1 done, E1 error
@@ -384,6 +387,9 @@ const EASE = 'cubic-bezier(.32,.72,0,1)'; // fast start, long soft settle
 let morph = null, fading = null, closeDelay = 300, closing = null;
 window.loupe.onConfig(c => {
   closeDelay = c.closeDelay; sound = c.sound;
+  procsCfg = { ok: !!c.procsOk, on: !!c.procs, asked: !!c.procsAsked };
+  if (!procsCfg.on) { procs = null; pview = false; }
+  renderProcs();
   document.body.classList.toggle('goo-on', c.goo);
   document.documentElement.classList.toggle('dock', !!c.dock);
   document.documentElement.classList.toggle('glass-dark', (c.glass || 'dark') === 'dark');
@@ -395,6 +401,7 @@ window.loupe.onConfig(c => {
 function setOpen(open) {
   if (island.classList.contains('open') === open && !fading) return;
   if (!open) muteEl.parentElement.classList.remove('show'); // slider starts hidden next time
+  if (!open) { pview = false; pask = null; review = false; } // opens on the thread list next time
   if (morph) morph.cancel();
   if (fading) { fading.cancel(); fading = null; }
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -403,9 +410,11 @@ function setOpen(open) {
     fading = island.querySelector('.body').animate(
       [{ opacity: 1 }, { opacity: 0 }], // no blur filter: blurring text every frame stutters
       { duration: 120, easing: 'ease-out', fill: 'forwards' });
-    fading.onfinish = () => { fading.cancel(); fading = null; resize(false); };
+    fading.onfinish = () => { fading.cancel(); fading = null; renderProcs(); resize(false); };
     return;
   }
+  if (open && procsCfg.on) window.loupe.procs();
+  if (!open) renderProcs();
   if (!reduce) resize(open); else island.classList.toggle('open', open);
   kick(); // the other canvas just became visible
 }
@@ -480,7 +489,7 @@ if (!notch) island.addEventListener('pointerdown', e => {
 // the cursor leaves and comes back, since mouseenter only fires again then. A card waiting for an answer keeps it open.
 island.addEventListener('click', e => {
   if (dragged) { dragged = false; return; } // the end of a drag, not a click
-  if (!island.classList.contains('open') || e.target.closest('button, input, #card, #more') ||
+  if (!island.classList.contains('open') || e.target.closest('button, input, #card, #more, #procs, #upd') ||
     muteEl.parentElement.contains(e.target)) return;
   if (last.some(s => s.ask && !dismissed.has(askKey(s)))) return;
   clearTimeout(closing); closing = null; hovered = false;
@@ -532,3 +541,116 @@ if (notch && window.loupe.onMenubar) {
   window.loupe.onState(() => requestAnimationFrame(ears)); // after render() has set the text
   new MutationObserver(() => requestAnimationFrame(ears)).observe(island, { attributes: true, attributeFilter: ['class'] });
 }
+
+// --- Processes (Windows): what Claude sessions left running, from reap.ps1 via main. Off until turned on.
+// One line per thread (click to open its rows), "No session" for leftovers of threads that are gone, and one line
+// of suggested kills at the bottom: everything thread-less, plus the tasks of threads idle 2 h or more.
+// Keep rows (allow.txt) are never suggested. Every kill asks first.
+const IDLE_MS = 2 * 3600e3, YOUNG_H = 1 / 60; // rows under a minute old are tool calls still running: not shown
+let procsCfg = { ok: false, on: false, asked: true }, procs = null, pview = false, pask = null, review = false, presult = '';
+const openG = new Set(), unpicked = new Set();
+const procsEl = $('procs'), procrow = $('procrow'), chipEl = $('chip'), updEl = $('upd');
+const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const hrs = h => h < 1 ? `${Math.max(1, Math.round(h * 60))}m` : h < 48 ? `${Math.round(h)}h` : `${Math.round(h / 24)}d`;
+const bgCount = id => procs ? procs.sessions.filter(r => r.sid === id && r.AgeH >= YOUNG_H).length : 0;
+
+function procGroups() {
+  if (!procs) return [];
+  const by = new Map();
+  for (const r of procs.sessions) {
+    if (r.AgeH < YOUNG_H) continue;
+    const s = last.find(x => x.id === r.sid);
+    const key = s ? s.id : '?';
+    if (!by.has(key)) by.set(key, {
+      key, name: s ? title(s) : 'Unknown thread', rows: [],
+      state: !s ? 'work' : active(s) ? 'work' : Date.now() - s.ts >= IDLE_MS ? 'idle' : 'quiet', ts: s ? s.ts : 0,
+    });
+    by.get(key).rows.push(r);
+  }
+  const gs = [...by.values()].sort((a, b) => b.ts - a.ts);
+  if (procs.leftovers.length) gs.push({ key: '-', name: 'No session', state: 'gone', rows: procs.leftovers });
+  return gs;
+}
+const suggested = gs => gs.flatMap(g => g.state === 'gone' || g.state === 'idle' ? g.rows.filter(r => !r.Allowed).map(r => ({ r, g })) : []);
+const stateWord = g => g.state === 'gone' ? 'closed or archived' : g.state === 'work' ? 'working' : `idle ${ago(g.ts)}`;
+
+function renderProcs() {
+  const on = procsCfg.ok && procsCfg.on;
+  island.classList.toggle('showupd', procsCfg.ok && !procsCfg.asked);
+  if (procsCfg.ok && !procsCfg.asked && !updEl.firstChild) updEl.innerHTML = `<div class="tile">
+    <div class="q">New: Processes</div>
+    <p>Claude sessions can leave dev servers, log tails and watchers running after you are done with them. They hold ports and memory until you restart.</p>
+    <p>LOUPE can list them under each thread and point out the ones from threads you have finished. You pick what closes, and nothing closes without your OK.</p>
+    <div class="btns"><button class="btn" data-a="later">Not now</button><button class="btn pri" data-a="on">Turn on</button></div></div>`;
+  const gs = on ? procGroups() : [], sg = suggested(gs);
+  const all = gs.flatMap(g => g.rows), mb = all.reduce((a, r) => a + r.MemMB, 0);
+  chipEl.textContent = on && sg.length ? `${sg.length} to kill` : '';
+  island.classList.toggle('empty', !last.length && !chipEl.textContent); // no threads but leftovers: stay visible
+  island.classList.toggle('hasprocs', on && !!procs);
+  procrow.innerHTML = `Processes<span></span>${all.length} · ${mb} MB${sg.length ? ` · ${sg.length} to kill` : ''}`;
+  island.classList.toggle('procsview', on && pview);
+  if (!on || !pview) return;
+  const picked = sg.filter(x => !unpicked.has(x.r.Pid)), pmb = picked.reduce((a, x) => a + x.r.MemMB, 0);
+  let h = `<div class="top"><b>Processes</b><span>${all.length} · ${mb} MB</span><span class="sp"></span><button class="ib" data-a="back">Threads</button><button class="ib" data-a="off">Turn off</button></div><div class="tile list">`;
+  if (!gs.length) h += '<div class="empty">Nothing running in the background.</div>';
+  h += gs.map(g => {
+    const open = openG.has(g.key), gm = g.rows.reduce((a, r) => a + r.MemMB, 0);
+    return `<div class="grp${open ? ' open' : ''}"><button class="gh ${g.state === 'idle' || g.state === 'quiet' ? 'idle' : g.state === 'gone' ? 'gone' : ''}" data-g="${esc(g.key)}">` +
+      `<span class="nm">${esc(g.name)}</span><span class="st">${stateWord(g)}</span><span class="ct">${g.rows.length} · ${gm} MB</span><span class="cv">›</span></button>` +
+      (open ? g.rows.map(r => `<div class="p${r.Allowed ? ' keep' : ''}" data-pid="${r.Pid}"><span class="n" data-open="1" title="PID ${r.Pid}">${esc(r.Label || r.Name)}${r.Allowed ? '<span class="tag">keep</span>' : ''}</span>` +
+        `<span class="m">${r.Ports ? `:${esc(r.Ports.split(',')[0])} · ` : ''}${r.MemMB} MB · ${hrs(r.AgeH)}</span><button class="x" data-kill="${r.Pid}">Kill</button>` +
+        `<div class="cmd">PID ${r.Pid} · ${esc(r.Cmd)}</div></div>`).join('') : '') + '</div>';
+  }).join('');
+  h += '</div><div class="tile">';
+  if (pask) {
+    const set = all.filter(r => pask.includes(r.Pid)), m = set.reduce((a, r) => a + r.MemMB, 0);
+    h += `<div class="sline"><span class="sum"><b>Kill ${set.length === 1 ? esc(set[0].Label || set[0].Name) : `${set.length} processes`}?</b> ${m} MB, can't be undone</span>` +
+      `<button class="btn sm" data-a="no">Cancel</button><button class="btn sm kill" data-a="yes">Kill</button></div>`;
+  } else if (presult) {
+    h += `<div class="sline"><span class="sum">${esc(presult)}</span></div>`;
+  } else if (!sg.length) {
+    h += '<div class="sline"><span class="sum">Nothing to kill</span></div>';
+  } else {
+    if (review) h += sg.map(({ r, g }) => `<div class="s${unpicked.has(r.Pid) ? '' : ' on'}" data-pick="${r.Pid}"><span class="ck"></span>` +
+      `<span class="n">${esc(r.Label || r.Name)}</span><span class="why">${g.state === 'gone' ? 'thread gone' : `idle ${ago(g.ts)}`} · ${r.MemMB} MB</span></div>`).join('');
+    h += `<div class="sline"><span class="sum"><b>${picked.length} to kill</b> · ${pmb} MB</span><button class="btn sm" data-a="review">${review ? 'Done' : 'Review'}</button>` +
+      `<button class="btn sm kill" data-a="kp"${picked.length ? '' : ' disabled'}>Kill ${picked.length}</button></div>`;
+  }
+  const keep = procsEl.querySelector('.list'), top = keep ? keep.scrollTop : 0;
+  procsEl.innerHTML = h + '</div>';
+  const list = procsEl.querySelector('.list'); if (list) list.scrollTop = top;
+}
+
+window.loupe.onProcs(p => { procs = p; render(last); });
+procrow.onclick = e => { e.stopPropagation(); pview = true; presult = ''; window.loupe.procs(); renderProcs(); };
+updEl.addEventListener('click', e => {
+  e.stopPropagation();
+  const a = e.target.closest('[data-a]'); if (!a) return;
+  procsCfg.asked = true; updEl.replaceChildren();
+  if (a.dataset.a === 'on') { procsCfg.on = true; pview = true; window.loupe.setConfig({ procs: true, procsAsked: true }); }
+  else window.loupe.setConfig({ procsAsked: true });
+  renderProcs();
+});
+procsEl.addEventListener('click', async e => {
+  e.stopPropagation(); // the re-render detaches e.target, so the island's fold-on-click check can't see it came from here
+  const t = e.target.closest('[data-a], [data-g], [data-kill], [data-pick], [data-open]'); if (!t) return;
+  const a = t.dataset.a;
+  if (a === 'back') pview = false;
+  else if (a === 'off') { procsCfg.on = false; pview = false; window.loupe.setConfig({ procs: false, procsAsked: true }); }
+  else if (a === 'review') review = !review;
+  else if (a === 'no') pask = null;
+  else if (a === 'kp') pask = suggested(procGroups()).filter(x => !unpicked.has(x.r.Pid)).map(x => x.r.Pid);
+  else if (a === 'yes') {
+    const pids = pask; pask = null; review = false; presult = 'Killing…'; renderProcs();
+    const rowsNow = procGroups().flatMap(g => g.rows); // pid@start, so a reused PID is never killed
+    const out = await window.loupe.kill(pids.map(p => { const r = rowsNow.find(x => x.Pid === p); return r ? `${p}@${r.Started}` : String(p); }));
+    const ok = out.filter(l => / killed /.test(l)).length, bad = out.length - ok;
+    presult = bad ? `${ok} killed, ${bad} not: ${out.find(l => !/ killed /.test(l))}` : `${ok} killed`;
+    setTimeout(() => { presult = ''; renderProcs(); }, 4000);
+  }
+  else if (t.dataset.g) { const k = t.dataset.g; openG.has(k) ? openG.delete(k) : openG.add(k); }
+  else if (t.dataset.kill) pask = [+t.dataset.kill];
+  else if (t.dataset.pick) { const p = +t.dataset.pick; unpicked.has(p) ? unpicked.delete(p) : unpicked.add(p); }
+  else if (t.dataset.open) t.closest('.p').classList.toggle('open');
+  if (!t.dataset.open) renderProcs();
+});

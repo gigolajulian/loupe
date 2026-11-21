@@ -5,7 +5,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'">
 <style>
   :root {
-    --tile: #151517; --line: #26262a; --fg: #ececec; --dim: #8b8b91; --faint: #77777e; --accent: #5fc3d3;    --sans: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+    --tile: #151517; --line: #26262a; --fg: #ececec; --dim: #8b8b91; --faint: #77777e; --accent: #5fc3d3; --danger: #9a4a4a; --danger-hover: #ad5656; --mono: "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; --sans: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
   }
   * { box-sizing: border-box; margin: 0; }
   html, body { background: transparent; overflow: hidden; user-select: none; }
@@ -49,13 +49,13 @@
 
   .tile { background: var(--tile); border-radius: 14px; padding: 12px; }
   .mark { position: absolute; top: 11px; left: 14px; width: 18px; height: 18px; display: grid; place-items: center; }
-  .hd { padding: 3px 36px 6px 28px; font: 11px "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hd { padding: 3px 36px 6px 28px; font: 11px var(--mono); color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .hd b { color: var(--fg); font-weight: 500; }
   .island.asking .hd { display: none; }
   canvas { display: block; }
-  .verb { font: 12px "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; color: var(--fg); max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .verb { font: 12px var(--mono); color: var(--fg); max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .verb.need { color: var(--accent); }
-  .proj { font: 600 12px "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; color: var(--fg); max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .proj { font: 600 12px var(--mono); color: var(--fg); max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .proj:empty { display: none; }
   .proj + .verb { color: var(--dim); }
   .proj + .verb.need { color: var(--accent); }
@@ -65,13 +65,13 @@
   .r::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--fg); }
   .r.quiet::before { background: var(--faint); }
   .r.need::before { background: var(--accent); }
-  .r .st { flex: 1; min-width: 0; color: var(--faint); font: 11px "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .r .st { flex: 1; min-width: 0; color: var(--faint); font: 11px var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .r .st span { display: inline-block; max-width: 12ch; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
   .r .st .on { color: var(--fg); }
   .r .st .need { color: var(--accent); }
   .r .n { flex: 0 1 auto; font-weight: 500; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .r .top { display: flex; align-items: baseline; gap: 8px; min-width: 0; flex: 0 1 auto; }
-  .r .v { grid-column: 2; color: var(--faint); font: 11px "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .r .v { grid-column: 2; color: var(--faint); font: 11px var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .r.go:hover { background: #151517; }
   .r.need { background: #0f1517; }
   .r.need .v { color: var(--accent); }
@@ -93,12 +93,12 @@
   .island.asking .sess { display: none; }
   /* header line beside the small orb: project and step in mono, icon buttons on the right */
   .who { display: flex; align-items: center; gap: 8px; padding: 0 30px 4px 28px; min-height: 26px;
-         font: 11px "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; color: var(--dim); white-space: nowrap; }
+         font: 11px var(--mono); color: var(--dim); white-space: nowrap; }
   .who b { color: var(--fg); font-weight: 500; overflow: hidden; text-overflow: ellipsis; }
   .who .st { overflow: hidden; text-overflow: ellipsis; }
   .who .t { color: var(--accent); display: flex; align-items: center; gap: 6px; }
   .who .sp { flex: 1; }
-  .code { font: 12px/1.6 "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; background: rgba(0,0,0,.25); border-radius: 8px; padding: 8px 10px; margin: 0 6px;
+  .code { font: 12px/1.6 var(--mono); background: rgba(0,0,0,.25); border-radius: 8px; padding: 8px 10px; margin: 0 6px;
           white-space: pre-wrap; word-break: break-all; max-height: 120px; overflow: hidden; }
   .q { font-size: 13.5px; font-weight: 500; line-height: 1.35; padding: 2px 6px 6px; text-wrap: balance; }
   /* soft pills, right aligned; the filled accent one is the default action */
@@ -113,7 +113,7 @@
   .opt { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; column-gap: 8px; align-items: baseline; padding: 6px; border-radius: 9px;
          font: 12.5px var(--sans); color: var(--fg); text-align: left; background: none; border: 0; cursor: default; }
   .opt:hover { background: rgba(255,255,255,.045); }
-  .opt .k { font: 10.5px "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; color: var(--faint); }
+  .opt .k { font: 10.5px var(--mono); color: var(--faint); }
   /* options wrap to three lines (#11), so the whole choice reads without the app */
   .opt .l { font-weight: 500; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
   .opt .d { grid-column: 2 / -1; grid-row: 2; color: var(--faint); font-size: 11.5px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
@@ -123,7 +123,7 @@
   textarea.other:focus { box-shadow: inset 0 0 0 1px rgba(95,195,211,.5); }
   .opts.typing textarea.other { display: block; }
   .opt .d:empty { display: none; }
-  .opt .rec { grid-column: 3; grid-row: 1; font: 10px "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; color: var(--accent); opacity: .8; }
+  .opt .rec { grid-column: 3; grid-row: 1; font: 10px var(--mono); color: var(--accent); opacity: .8; }
   .opt.sel { background: rgba(95,195,211,.09); }
   .opt.sel .l, .opt.sel .k { color: var(--accent); }
   .link { color: var(--faint); width: 22px; height: 22px; display: grid; place-items: center; border-radius: 6px; background: none; border: 0; cursor: default; flex: none; }
@@ -191,6 +191,71 @@
   .notch .goo .drop { display: none; }
   .notch .island.open { --dim: #c2c2c8; --faint: #a4a4ab; } /* lighter glass: lift the grey text */
   .notch .wrap:has(.open) .goo .main::before, .notch .wrap:has(.open) .goo .main::after { display: none; }
+  /* Processes (Windows): what sessions left running. Tokens from DESIGN.md; Kill is the danger red, never cyan. */
+  .chip { font: 11px var(--mono); color: var(--dim); background: rgba(255,255,255,.06); border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+  .chip:empty, .notch .chip { display: none; }
+  .r .bg { font: 10px var(--mono); color: var(--dim); flex: none; }
+  .r .bg:empty { display: none; }
+  .procrow { display: none; align-items: center; gap: 9px; width: 100%; padding: 8px; margin-top: 2px; border: 0; border-radius: 9px; background: none;
+    font: 11px var(--mono); color: var(--dim); text-align: left; cursor: default; }
+  .procrow:hover { background: rgba(255,255,255,.045); color: var(--fg); }
+  .procrow span { flex: 1; }
+  .island.hasprocs .procrow { display: flex; }
+  .procs { display: none; flex-direction: column; gap: 2px; }
+  .island.procsview .procs { display: flex; }
+  .island.procsview .sess, .island.procsview .procrow, .island.procsview .hd, .island.asking .procs, .island.asking .procrow { display: none; }
+  .procs .tile { padding: 6px; }
+  .procs .top { display: flex; align-items: center; gap: 8px; padding: 0 30px 4px 28px; min-height: 26px; font: 11px var(--mono); color: var(--dim); }
+  .procs .top b { color: var(--fg); font-weight: 500; }
+  .procs .list { max-height: 250px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #3a3a40 transparent; }
+  .sp { flex: 1; }
+  .ib { font: 11px var(--mono); color: var(--dim); background: none; border: 0; border-radius: 999px; padding: 4px 8px; cursor: default; }
+  .ib:hover { color: var(--fg); background: rgba(255,255,255,.07); }
+  .gh { display: flex; align-items: center; gap: 9px; width: 100%; height: 32px; padding: 0 8px; border: 0; border-radius: 9px; background: none;
+    color: var(--fg); font: 500 12.5px var(--sans); text-align: left; cursor: default; }
+  .gh:hover { background: rgba(255,255,255,.045); }
+  .gh::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--fg); flex: none; }
+  .gh.idle::before { background: #3a3a40; }
+  .gh.gone::before { background: none; box-shadow: inset 0 0 0 1.2px var(--faint); }
+  .gh .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .gh .st { font: 11px var(--mono); color: var(--faint); font-weight: 400; white-space: nowrap; }
+  .gh .ct { font: 11px var(--mono); color: var(--dim); font-weight: 400; white-space: nowrap; margin-left: auto; }
+  .gh .cv { font: 11px var(--mono); color: var(--faint); transition: transform .2s var(--ease, ease); }
+  .grp.open .gh .cv { transform: rotate(90deg); }
+  .p { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; column-gap: 8px; align-items: center; padding: 0 2px 0 23px; border-radius: 9px; min-height: 28px; }
+  .p:hover { background: rgba(255,255,255,.045); }
+  .p .n { font: 11.5px var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .p .m { font: 11px var(--mono); color: var(--faint); white-space: nowrap; }
+  .p .x, .p .x:focus-visible { font: 11px var(--mono); color: var(--faint); background: none; border: 0; border-radius: 999px; padding: 3px 8px; cursor: default; opacity: 0; }
+  .p:hover .x, .p .x:focus-visible { opacity: 1; }
+  .p .x:hover { color: #fff; background: var(--danger); }
+  .p.keep .n, .p.keep .m { color: var(--faint); }
+  .p .cmd { grid-column: 1 / -1; display: none; font: 10.5px/1.5 var(--mono); color: var(--faint); background: rgba(0,0,0,.25); border-radius: 8px;
+    padding: 6px 8px; margin: 2px 0 4px; word-break: break-all; user-select: text; }
+  .p.open .cmd { display: block; }
+  .tag { font: 10px var(--mono); color: var(--faint); background: rgba(255,255,255,.05); border-radius: 999px; padding: 1px 7px; margin-left: 6px; }
+  .s { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; column-gap: 6px; align-items: center; padding: 0 8px 0 2px; border-radius: 9px; min-height: 28px; }
+  .s:hover { background: rgba(255,255,255,.045); }
+  .s .ck { width: 14px; height: 14px; border-radius: 4px; box-shadow: inset 0 0 0 1.3px var(--faint); justify-self: center; display: grid; place-items: center; }
+  .s.on .ck { background: var(--fg); box-shadow: none; }
+  .s.on .ck::after { content: ""; width: 7px; height: 4px; border: solid #101114; border-width: 0 0 1.6px 1.6px; transform: translateY(-1px) rotate(-45deg); }
+  .s .n { font: 11.5px var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .s .why { font: 11px var(--mono); color: var(--faint); white-space: nowrap; }
+  .sline { display: flex; align-items: center; gap: 6px; padding: 0 2px 0 8px; min-height: 34px; }
+  .sline .sum { flex: 1; min-width: 0; font: 11px var(--mono); color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sline .sum b { color: var(--fg); font-weight: 500; }
+  .btn.sm { padding: 0 12px; height: 26px; }
+  .btn.kill { color: #fff; background: var(--danger); }
+  .btn.kill:hover { background: var(--danger-hover); }
+  .btn.kill:disabled { background: rgba(255,255,255,.07); color: var(--faint); }
+  .empty { font: 11px var(--mono); color: var(--faint); text-align: center; padding: 12px 0; }
+  /* shown once after the update that brings Processes */
+  .upd { display: none; }
+  .island.showupd .upd { display: block; }
+  .island.asking .upd, .island.procsview .upd { display: none; }
+  .upd .q { padding: 2px 6px 4px; }
+  .upd p { font-size: 12.5px; color: var(--dim); padding: 0 6px 6px; line-height: 1.45; }
+  .upd .btns { padding: 4px 2px 2px; }
 </style>
 </head>
 <body>
@@ -209,12 +274,15 @@
 <div class="wrap">
 <div class="goo"><div class="main"></div><div class="drop" id="drop"></div></div>
 <div class="island empty" id="island">
-  <div class="mini"><span class="side"><canvas id="orb-s" data-size="20" data-px="26"></canvas><span class="proj" id="proj"></span></span><i class="gap"></i><span class="verb" id="verb"></span></div>
+  <div class="mini"><span class="side"><canvas id="orb-s" data-size="20" data-px="26"></canvas><span class="proj" id="proj"></span></span><i class="gap"></i><span class="verb" id="verb"></span><span class="chip" id="chip"></span></div>
   <div class="body">
     <div class="mark"><canvas id="orb-l" data-size="20" data-px="18"></canvas></div>
     <div class="vol"><button class="mute" id="mute" aria-label="Volume"><svg class="i"><use href="#vol"/></svg></button><input type="range" id="volume" min="0" max="1" step="0.05" aria-label="Volume"></div>
     <div class="hd" id="hd"></div>
+    <div class="upd" id="upd"></div>
     <div class="sess" id="sess"><div class="more" id="more"></div></div>
+    <button class="procrow" id="procrow"></button>
+    <div class="procs" id="procs"></div>
     <div class="ask" id="card"></div>
   </div>
 </div>
