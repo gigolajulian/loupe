@@ -34,5 +34,7 @@ CSS custom properties that match the direction. Mocks and the app both use these
 One line each, checked on every mock and build:
 - Tap targets at least 44 px; text contrast at least 4.5:1.
 - No em dashes in any copy.
-- Mono is hard-coded about 12 times in index.html; move it to `--mono` when next touched.
 - Check Windows and the Mac notch.
+- Kill and other destructive buttons use `--danger`, never cyan; each kill asks once in place (no dialog).
+- Processes rows are one line (28 to 32 px, mouse only, Julian asked for a compact panel 2026-11-21); keep lists to one line per item and open details on click.
+- Nothing animates or polls while idle unless it shows: state is sent only when it changes, background checks only while their feature is on.

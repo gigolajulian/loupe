@@ -63,20 +63,77 @@ function overlayCheck(own) {
   };
 }
 
+// state goes to the renderer only when it changed, plus a 30 s heartbeat for "idle 5m" ages. Sending it every
+// second re-rendered the panel every second.
+let sentState = '', sentFront = null, sentAt = 0;
 function push() {
-  if (win && !win.isDestroyed()) { win.webContents.send('front', claudeFront); win.webContents.send('state', view(sessions)); }
+  if (!win || win.isDestroyed()) return;
+  if (claudeFront !== sentFront) { sentFront = claudeFront; win.webContents.send('front', claudeFront); }
+  const list = view(sessions), json = JSON.stringify(list), now = Date.now();
+  if (json === sentState && now - sentAt < 30e3) return;
+  sentState = json; sentAt = now;
+  win.webContents.send('state', list);
 }
 
-// the session's title (the app's rename, e.g. "JG - QA") is the last agent-name line in its transcript
+// the session's title (the app's rename, e.g. "JG - QA") is the last agent-name line in its transcript.
+// Transcripts reach hundreds of MB, so read backwards in 1 MB steps (8 MB at most) the first time, then only
+// what was appended since. Reading the whole file on every prompt held hundreds of MB in LOUPE.
+const TITLE_RE = /"type":"agent-name","agentName":"((?:[^"\\]|\\.)*)"/g, STEP = 1 << 20, FIRST_MAX = 8 * STEP;
 function readTitle(s, file) {
   s.title = s.title || '';
-  fs.readFile(file, 'utf8', (err, text) => {
-    if (err) return;
-    const all = [...text.matchAll(/"type":"agent-name","agentName":"((?:[^"\\]|\\.)*)"/g)];
-    if (!all.length) return;
-    s.title = JSON.parse(`"${all[all.length - 1][1]}"`);
-    push();
+  if (s.titleBusy) return;
+  s.titleBusy = true;
+  fs.open(file, 'r', async (err, fd) => {
+    if (err) return void (s.titleBusy = false);
+    try {
+      const size = fs.fstatSync(fd).size, from = s.titleFile === file ? s.titleAt : -1;
+      const read = (pos, len) => { const b = Buffer.alloc(len); fs.readSync(fd, b, 0, len, pos); return b.toString('utf8'); };
+      let found = null;
+      if (from >= 0) { // appended part only, with a little overlap for a line cut at the old end
+        const at = Math.max(0, from - 4096, size - FIRST_MAX); // a big append: its newest 8 MB
+        if (size > at) found = [...read(at, Math.min(size - at, FIRST_MAX)).matchAll(TITLE_RE)].pop();
+      } else for (let end = size; end > 0 && size - end < FIRST_MAX && !found; end -= STEP - 4096) {
+        const at = Math.max(0, end - STEP);
+        found = [...read(at, end - at).matchAll(TITLE_RE)].pop();
+        if (!at) break;
+      }
+      s.titleFile = file; s.titleAt = size;
+      if (found) { s.title = JSON.parse(`"${found[1]}"`); push(); }
+    } catch {} finally { fs.close(fd, () => {}); s.titleBusy = false; }
   });
+}
+
+// Windows: which claude.exe a hook came from. The hook runs under a short-lived bash, so walk up the parent
+// chain right away, while it still exists. One Toolhelp snapshot, no child process.
+let parentsOf = () => null, procsOn = false; // procsOn mirrors cfg.procs (Windows)
+if (!MAC) try {
+  const koffi = require('koffi');
+  const k32 = koffi.load('kernel32.dll');
+  const PE = koffi.struct('PROCESSENTRY32W', { dwSize: 'uint32', cntUsage: 'uint32', th32ProcessID: 'uint32', th32DefaultHeapID: 'uintptr_t',
+    th32ModuleID: 'uint32', cntThreads: 'uint32', th32ParentProcessID: 'uint32', pcPriClassBase: 'int32', dwFlags: 'uint32', szExeFile: koffi.array('char16_t', 260, 'String') });
+  const snap = k32.func('intptr_t __stdcall CreateToolhelp32Snapshot(uint32 flags, uint32 pid)');
+  const first = k32.func('bool __stdcall Process32FirstW(intptr_t h, _Inout_ PROCESSENTRY32W *e)');
+  const next = k32.func('bool __stdcall Process32NextW(intptr_t h, _Inout_ PROCESSENTRY32W *e)');
+  const close = k32.func('bool __stdcall CloseHandle(intptr_t h)');
+  parentsOf = () => {
+    const h = snap(2 /* TH32CS_SNAPPROCESS */, 0), map = new Map();
+    if (h === -1 || !h) return null;
+    try {
+      const e = { dwSize: koffi.sizeof(PE) };
+      for (let ok = first(h, e); ok; ok = next(h, e)) map.set(e.th32ProcessID, { ppid: e.th32ParentProcessID, exe: e.szExeFile });
+    } finally { close(h); }
+    return map;
+  };
+} catch (e) { console.log('process walk off', e.message); }
+function claudePid(ppid) {
+  const map = parentsOf();
+  for (let pid = ppid, n = 0; map && pid && n < 8; n++) {
+    const p = map.get(pid);
+    if (!p) return 0;
+    if (/^claude\.exe$/i.test(p.exe)) return pid;
+    pid = p.ppid;
+  }
+  return 0;
 }
 
 // no keyboard or mouse for 2 minutes: held prompts go back to the thread, so a phone or a later look at the app sees them
@@ -130,6 +187,11 @@ function listen() {
         }
         apply(sessions, ev);
         const s = sessions.get(ev.session_id);
+        // only while Processes is on, and 3 tries per session: the hook's short-lived bash can be gone already
+        if (s && !s.pid && ev.orb_ppid && procsOn && (s.pidTries = (s.pidTries || 0) + 1) <= 3) {
+          s.pid = claudePid(ev.orb_ppid);
+          if (process.env.LOUPE_SNAP) console.log('session pid', s.name, ev.orb_ppid, '->', s.pid);
+        }
         if (s && ev.transcript_path && (s.title === undefined || ev.hook_event_name === 'UserPromptSubmit')) readTitle(s, ev.transcript_path);
       }
       push();
@@ -347,7 +409,7 @@ app.whenReady().then(() => {
   screen.on('display-metrics-changed', () => { place(); sendCfg(); });
   const sendCfg = () => {
     if (!MAC) win.webContents.setZoomFactor(cfg.size === 'small' ? 0.85 : 1); // tray Size (#10); the notch keeps its fit
-    win.webContents.send('config', { ...cfg, dock: place() });
+    win.webContents.send('config', { ...cfg, dock: place(), procsOk: !MAC });
   };
   const saveCfg = () => fs.writeFileSync(cfgPath, JSON.stringify(cfg));
   // Windows: drag the island sideways along its edge (#10). dx is the cursor travel since the press.
@@ -392,6 +454,8 @@ app.whenReady().then(() => {
     })) },
     { label: 'Gooey motion', type: 'checkbox', checked: cfg.goo,
       click: () => { cfg.goo = !cfg.goo; fs.writeFileSync(cfgPath, JSON.stringify(cfg)); sendCfg(); menu(); } },
+    ...(MAC ? [] : [{ label: 'Processes (leftovers from sessions)', type: 'checkbox', checked: !!cfg.procs,
+      click: () => { cfg.procs = !cfg.procs; cfg.procsAsked = true; saveCfg(); sendCfg(); menu(); procsTick(true); } }]),
     { label: 'Sounds', type: 'checkbox', checked: cfg.sound,
       click: () => { cfg.sound = !cfg.sound; fs.writeFileSync(cfgPath, JSON.stringify(cfg)); sendCfg(); menu(); } },
     // relay.js reads this: on, permissions and questions wait for the island and stay out of the thread until answered
@@ -435,8 +499,43 @@ app.whenReady().then(() => {
   menu();
   // first run or broken hooks: show the check with its Fix button, so setup never fails silently
   if (/--(fix|check)-hooks/.test(process.argv.join(' '))) hookArgs(process.argv); else hookCheck(false, true);
-  // the island's own sound controls
-  ipcMain.on('config', (_, patch) => { Object.assign(cfg, patch); fs.writeFileSync(cfgPath, JSON.stringify(cfg)); menu(); });
+  // the island's own sound controls, and the Processes switch
+  ipcMain.on('config', (_, patch) => { Object.assign(cfg, patch); fs.writeFileSync(cfgPath, JSON.stringify(cfg)); menu(); if ('procs' in patch) { sendCfg(); procsTick(); } });
+
+  // Processes (Windows): what Claude sessions left running. reap.ps1 finds them; LOUPE only shows and asks.
+  // Off until turned on. Polls every 2 min while on, and when the panel opens (at most every 10 s).
+  const REAP = path.join(__dirname, 'reap', 'reap.ps1').replace('app.asar', 'app.asar.unpacked'); // PowerShell can't read inside the asar
+  const userAllow = path.join(os.homedir(), '.claude', 'skills', 'reap', 'allow.txt');
+  const reap = (args, done) => require('child_process').execFile('powershell.exe',
+    ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', REAP, '-Json',
+      '-AllowFile', fs.existsSync(userAllow) ? userAllow : path.join(path.dirname(REAP), 'allow.txt'), ...args],
+    { windowsHide: true, timeout: 30e3, maxBuffer: 4 << 20 }, (err, out) => { let j = null; try { j = JSON.parse(out); } catch {} done(err, j); });
+  let procsAt = 0, procsBusy = false, procsTimer = null;
+  const sendProcs = j => {
+    if (win.isDestroyed()) return;
+    if (!j) return win.webContents.send('procs', null);
+    const byPid = new Map([...sessions.values()].filter(s => s.pid).map(s => [s.pid, s.id]));
+    const rows = (j.sessions || []).map(r => ({ ...r, sid: byPid.get(r.Host) || '' }));
+    win.webContents.send('procs', { leftovers: j.leftovers || [], sessions: rows });
+  };
+  function procsTick(force) {
+    clearTimeout(procsTimer); procsTimer = null;
+    procsOn = !MAC && !!cfg.procs;
+    if (!procsOn) return sendProcs(null);
+    procsTimer = setTimeout(() => procsTick(true), 120e3);
+    if (procsBusy || (!force && Date.now() - procsAt < 10e3) || (force && away())) return; // away: nobody to show it to
+    procsBusy = true;
+    reap([], (err, j) => { procsBusy = false; procsAt = Date.now(); if (j) sendProcs(j); else console.log('reap failed', err && err.message); });
+  }
+  ipcMain.on('procs', () => procsTick(false)); // the panel opened
+  // Kill picked rows. reap re-checks each PID's start time and command first, and logs to ~/.claude/reap.log.
+  ipcMain.handle('kill', (_, pids) => new Promise(res => {
+    // "pid@start": reap kills only if the PID still has the start time the panel showed (no reused PIDs)
+    pids = (pids || []).map(String).filter(p => /^\d{3,7}(@\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)?$/.test(p));
+    if (MAC || !cfg.procs || !pids.length) return res([]);
+    reap(['-Kill', pids.join(',')], (err, out) => { res(Array.isArray(out) ? out : [String(out || (err && err.message) || 'failed')]); procsTick(true); });
+  }));
+  win.webContents.on('did-finish-load', () => procsTick(true));
 
   listen();
   setInterval(push, 1000); // done -> idle fade, stale drop

@@ -11,5 +11,8 @@ contextBridge.exposeInMainWorld('loupe', {
   drag: dx => ipcRenderer.send('drag', dx), // Windows: slide the island along the top edge
   setConfig: patch => ipcRenderer.send('config', patch),
   glass: rect => ipcRenderer.send('glass', rect),
+  onProcs: cb => ipcRenderer.on('procs', (_, p) => cb(p)), // Processes: { leftovers, sessions } or null when off
+  procs: () => ipcRenderer.send('procs'), // the panel opened: refresh soon
+  kill: pids => ipcRenderer.invoke('kill', pids), // after the confirm; resolves with reap's result lines
   onMenubar: cb => ipcRenderer.on('menubar', (_, m) => cb(m)), // Mac: where app menus end and icons start
 });

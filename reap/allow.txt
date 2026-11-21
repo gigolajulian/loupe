@@ -1,0 +1,3 @@
+# Substrings of command lines that are meant to keep running. Listed as keep: never suggested, never killed in bulk.
+# LOUPE reads ~/.claude/skills/reap/allow.txt instead when that file exists.
+.loupe\relay.js
