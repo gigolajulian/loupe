@@ -1,7 +1,7 @@
 # Baseline: loupe
 
 App: loupe
-Stage: 1
+Stage: 2
 Parts: desktop, local, web
 Features: none
 Checklist version: 2026.11.20.5
@@ -10,7 +10,7 @@ Gate answer:
 Gate asked: 
 Next ask after: 
 Manual expiry days: 180
-Stage override:
+Stage override: Julian, 2026-11-22: stage 2, Nathan installs and uses it and the repo is public
 Parts override: web is the Electron renderer (index.html), not a served site; confirm with the owner
 Features override:
 
@@ -30,3 +30,11 @@ Detected: has web pages (index.html); a project with dependencies (package.json)
 | EXIT-6 | desktop, local | open | | | | | gap: no test. In code: Mac helper exits when stdin closes; relay hooks exit when the pipe closes. Gap: a reap PowerShell started just before a crash runs unbounded (the 30 s timeout lives in LOUPE). No test. Small. |
 | DATA-1 | any | open | | | | | gap: needs the owner. User data is only config.json (a few tray settings) and the settings.json backups; ask whether n/a is right. |
 | REL-1 | any | open | | | | | gap: no CI. npm test runs 3 tests; the self-tests in sessions.js, hooks.js and reap.ps1 -SelfTest are not wired into it. Small. |
+| PRIV-2 | any | open | | | | | gap: no test. reap.ps1 writes each killed command line in full to ~/.claude/reap.log, and a command line can carry a token or a private path. updater.log holds versions and URLs only. Small. |
+| OBS-1 | web | open | | | | | gap: web part only, n/a if the web part is dropped (no public endpoint). Desktop errors: updater.log only, no crash log. |
+| COST-1 | any | open | | | | | gap: likely n/a, no paid service (GitHub releases, no cloud, no AI API, no CI). Owner to confirm. |
+| WEB-3 | web | open | | | | | gap: web part only, n/a if the web part is dropped (no cookies, no sessions, no HTTP server). |
+| WEB-5 | desktop, local | open | | | | | gap: likely n/a, no uploads or imports. The only file it reads from outside is the session transcript, capped at 8 MB per read. |
+| WEB-7 | web | open | | | | | gap: no test. In code: the renderer escapes session text (esc in renderer.js) and index.html sets CSP default-src self. Small. |
+| WEB-8 | desktop, local | open | | | | | gap: no test. In code: reap runs through execFile with an argument array (no shell), Kill PIDs are regex-checked, shell.openExternal only gets claude:// with a checked session id. Small. |
+| WEB-9 | web | open | | | | | gap: web part only, n/a if the web part is dropped. Update and signature fetches use https to GitHub. |
