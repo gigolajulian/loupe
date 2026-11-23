@@ -555,8 +555,11 @@ const hrs = h => h < 1 ? `${Math.max(1, Math.round(h * 60))}m` : h < 48 ? `${Mat
 // a leftover is still in use while under 15 min old, or while its command runs from the folder of a working
 // session (a dev server whose launching shell exited): no Kill, never suggested (#16)
 const norm = p => String(p).toLowerCase().replace(/\\/g, '/').replace(/\/+$/, '');
+// shortcut: the folder only matches when the command names it (a server run by its full path, C:/ or /c/ form);
+// Bash tool command lines carry no cwd, so for those the 15 minutes do the work. Upgrade: read each orphan's cwd.
+const inFolder = (cmd, cwd) => { const c = norm(cmd), d = norm(cwd); return c.includes(d) || c.includes(d.replace(/^([a-z]):/, '/$1')); };
 const inUse = r => Date.now() - Date.parse(r.Started) < 15 * 60e3 ||
-  last.some(s => active(s) && s.cwd && norm(r.Cmd).includes(norm(s.cwd)));
+  last.some(s => active(s) && s.cwd && inFolder(r.Cmd, s.cwd));
 const bgCount = id => procs ? procs.sessions.filter(r => r.sid === id && r.AgeH >= YOUNG_H).length : 0;
 
 function procGroups() {

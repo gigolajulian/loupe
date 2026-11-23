@@ -111,7 +111,7 @@ Permissions and plan approvals show in the thread at once and LOUPE mirrors them
 Claude sessions can leave dev servers, log tails and watchers running after you are done with them. Processes lists them, and helps you close the ones you no longer need. It is off until you turn it on: LOUPE asks once after the update, and the tray's "Processes" switch or "Turn off" in the panel changes it any time.
 
 - **Under each thread:** the hover list shows "2 bg" beside a thread with background tasks, and a Processes row at the bottom. Each thread is one line; click it for its tasks with port, memory, age and a Kill button.
-- **No session:** tasks whose thread is gone (closed, archived or crashed). A task under 15 minutes old, or one running from the folder of a session that is working, shows "in use" with no Kill.
+- **No session:** tasks whose thread is gone (closed, archived or crashed). A task under 15 minutes old, or one whose command names the folder of a session that is working, shows "in use" with no Kill.
 - **Suggested:** everything under No session that is not in use, plus tasks of threads idle 2 hours or more. Review to untick any, then Kill. Every kill asks first.
 - **Keep:** command lines matching a line in `~/.claude/skills/reap/allow.txt` (or the bundled `reap/allow.txt`) are never suggested.
 - The engine is `reap/reap.ps1` (rules from [zclean](https://github.com/TheStack-ai/zclean), MIT). It re-checks each PID's start time and command before `taskkill /T`, kills at most 20 at a time, and logs to `~/.claude/reap.log`. Run it alone: `reap.ps1` lists, `-Kill <pids>`, `-Json`, `-SelfTest`.
