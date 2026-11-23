@@ -1,0 +1,32 @@
+{
+  "LOC-1@local": {
+    "result": "proven",
+    "command": "node --test test/pipe.test.js",
+    "break": ".bedrock/breaks/LOC-1.patch",
+    "patch_sha256": "809d5a561943bd8c54856c1f3e28ed88263ec0645a3952a0024a663718bdde7d",
+    "sha": "37b201e8a14985e82eb4c9806edc6a519523f84c",
+    "files": {
+      "pipe.js": "4cd43a654a9e8bb0a99a0e78d86e57b482ebd169c3b2747014d8b23a3159ba86",
+      "test/pipe.test.js": "4ff8f48d077205f82200ddc60f76b6d38394e7e5e40941813d95383871f1927a",
+      "test/update-signature.test.js": "9cd1715bf33e82dfc2000f65a1ae5bfe15c9c33cfadd75c59925fa9c9d7c99eb"
+    },
+    "seconds": 4.8,
+    "date": "2026-11-22",
+    "bedrock": "2.9.5"
+  },
+  "REL-1@any": {
+    "result": "proven",
+    "command": "npm test",
+    "break": ".bedrock/breaks/REL-1.patch",
+    "patch_sha256": "a2c5077c9c6e51e9612246e049215191fdeaa38f3a2c0092b77dc5d4377cca7a",
+    "sha": "37b201e8a14985e82eb4c9806edc6a519523f84c",
+    "files": {
+      "test/pipe.test.js": "4ff8f48d077205f82200ddc60f76b6d38394e7e5e40941813d95383871f1927a",
+      "test/update-signature.test.js": "9cd1715bf33e82dfc2000f65a1ae5bfe15c9c33cfadd75c59925fa9c9d7c99eb",
+      "update-signature.js": "abb8c3bd976273f7ea247756121b056fee9bdb05e0b74dce1786c43f7a130022"
+    },
+    "seconds": 9.6,
+    "date": "2026-11-22",
+    "bedrock": "2.9.5"
+  }
+}
