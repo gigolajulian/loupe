@@ -470,33 +470,55 @@ app.whenReady().then(() => {
       say('Accessibility for LOUPE', 'If LOUPE is already on in the list, select it, remove it with −, then add it back with + from Applications. Each new build needs this once.');
     } }] : []),
     { label: 'Check Claude Code hooks', click: () => hookCheck() },
-    ready ? { label: `Restart to update to ${ready}`, click: () => require('electron-updater').autoUpdater.quitAndInstall() }
+    ready ? { label: `Restart to update to ${ready}`, click: () => install() }
       : { label: `Check for updates (${app.getVersion()})`, enabled: app.isPackaged, click: () => checkUpdates(true) },
     { label: 'Quit LOUPE', click: () => app.quit() },
   ]));
-  // updates: GitHub releases (package.json build.publish). Windows downloads in the background and installs on quit.
+  // updates: GitHub releases (package.json build.publish). Windows downloads in the background, then asks before it
+  // installs (#1): "Restart to update" in a prompt once a day per version, and in the tray. Nothing installs on quit:
+  // LOUPE rarely quits on its own (Windows ends it at shutdown), which is how 0.2.14 sat on a downloaded 0.3.0 (#17).
   // The Mac build is unsigned, which Squirrel.Mac refuses, so there it only points at the release.
-  let ready = null, manual = false, told = '', checkUpdates = () => {};
+  let ready = null, manual = false, told = '', checkUpdates = () => {}, install = () => {};
   const say = (message, detail = '') => dialog.showMessageBox({ title: 'LOUPE', message, detail, noLink: true });
   // a failing updater must never stop the island: everything after this (tray menu, pipe) still runs
   if (app.isPackaged) try {
     const { autoUpdater } = require('electron-updater');
     autoUpdater.autoDownload = !MAC;
-    require('./update-signature').guard(autoUpdater, { app: 'LOUPE', log: console.log,
+    autoUpdater.autoInstallOnAppQuit = false;
+    install = () => autoUpdater.quitAndInstall(true, true); // silent, and LOUPE starts again after
+    // userData/updater.log, so a missed update can be traced (#17). Starts over past 256 KB.
+    const ulog = path.join(app.getPath('userData'), 'updater.log');
+    try { if (fs.statSync(ulog).size > 256 << 10) fs.unlinkSync(ulog); } catch {}
+    const w = lvl => m => fs.appendFile(ulog, `${new Date().toISOString()} ${lvl} ${m}\n`, () => {});
+    autoUpdater.logger = { info: w('info'), warn: w('warn'), error: w('error'), debug() {} };
+    require('./update-signature').guard(autoUpdater, { app: 'LOUPE', log: autoUpdater.logger.warn,
       sigUrl: v => `https://github.com/gigolajulian/loupe/releases/download/v${v}/LOUPE-Setup-${v}.exe.sig` });
     autoUpdater.on('update-available', i => {
-      if (!MAC) return manual && say(`Downloading LOUPE ${i.version}`, 'It installs when LOUPE quits.');
+      if (!MAC) return manual && say(`Downloading LOUPE ${i.version}`, 'LOUPE asks before it installs.');
       if (!manual && told === i.version) return;
       told = i.version;
       dialog.showMessageBox({ title: 'LOUPE', message: `LOUPE ${i.version} is out`, buttons: ['Download', 'Later'], noLink: true })
         .then(({ response }) => response === 0 && shell.openExternal('https://github.com/gigolajulian/loupe/releases/latest')); // the packaged package.json has no build.publish
     });
     autoUpdater.on('update-not-available', () => manual && say(`LOUPE ${app.getVersion()} is up to date`));
-    autoUpdater.on('update-downloaded', i => { ready = i.version; menu(); if (manual) say(`LOUPE ${i.version} is ready`, 'Restart from the tray, or it installs when LOUPE quits.'); });
+    // every check re-emits this for a download already on disk: ask at most once a day per version, unless asked
+    const askedAt = {};
+    autoUpdater.on('update-downloaded', i => {
+      ready = i.version; menu();
+      if (!manual && Date.now() - (askedAt[i.version] || 0) < 24 * 3600e3) return;
+      askedAt[i.version] = Date.now();
+      const notes = (Array.isArray(i.releaseNotes) ? i.releaseNotes.map(n => n.note).join('\n') : String(i.releaseNotes || ''))
+        .replace(/<\/(p|li|h\d)>/g, '\n').replace(/<[^>]+>/g, '').replace(/\n{3,}/g, '\n\n').trim().slice(0, 600);
+      dialog.showMessageBox({ title: 'LOUPE', message: `LOUPE ${i.version} is ready`, noLink: true,
+        detail: `${notes ? notes + '\n\n' : ''}Restart LOUPE to update, now or later from the tray.`,
+        buttons: ['Restart to update', 'Later'], defaultId: 0, cancelId: 1,
+      }).then(({ response }) => response === 0 && install());
+    });
     autoUpdater.on('error', e => { if (manual) say('Update check failed', String(e.message || e).split('\n')[0]); manual = false; });
     checkUpdates = m => { manual = m; autoUpdater.checkForUpdates().catch(() => {}); };
     checkUpdates(false);
     setInterval(() => checkUpdates(false), 4 * 3600e3);
+    powerMonitor.on('resume', () => checkUpdates(false)); // a PC that sleeps more than it runs still hears of updates
   } catch (e) { console.log('updater failed', e); }
   menu();
   // first run or broken hooks: show the check with its Fix button, so setup never fails silently
