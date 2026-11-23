@@ -1,0 +1,13 @@
+diff --git a/pipe.js b/pipe.js
+index 6e59743..739cf28 100644
+--- a/pipe.js
++++ b/pipe.js
+@@ -8,7 +8,7 @@ const path = require('path');
+ function open(dir, mac = process.platform === 'darwin') {
+   fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+   if (mac) fs.chmodSync(dir, 0o700); // the folder may predate this version
+-  const addr = mac ? path.join(dir, 'loupe.sock') : `\\\\.\\pipe\\loupe-${crypto.randomBytes(16).toString('hex')}`;
++  const addr = mac ? path.join(dir, 'loupe.sock') : `\\\\.\\pipe\\loupe-${require('os').userInfo().username}`;
+   const file = path.join(dir, 'pipe'), tmp = `${file}.${process.pid}.tmp`;
+   fs.writeFileSync(tmp, addr, { mode: 0o600 });
+   fs.renameSync(tmp, file); // a relay never reads half a name

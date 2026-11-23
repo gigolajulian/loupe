@@ -1,0 +1,13 @@
+diff --git a/update-signature.js b/update-signature.js
+index 9642358..fd2e8d7 100644
+--- a/update-signature.js
++++ b/update-signature.js
+@@ -30,7 +30,7 @@ function guard(updater, { app, sigUrl, log = console.error, key }) {
+         why = !r.ok ? `no signature (${r.status})` : signed(app, info.version, sha, await r.text(), key) ? '' : 'signature does not match';
+       }
+     } catch (e) { why = e.message; }
+-    if (!why) return null;
++    return null;
+     log(`update ${info && info.version}: ${why}, not installing`);
+     return why;
+   };

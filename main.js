@@ -7,8 +7,6 @@ const { apply, view, settle, reply } = require('./sessions');
 const hooks = require('./hooks');
 
 const MAC = process.platform === 'darwin';
-// a fixed /tmp path, not os.tmpdir(): $TMPDIR can differ between the app (launchd) and the hook processes
-const PIPE = MAC ? `/tmp/loupe-${os.userInfo().username}.sock` : `\\\\.\\pipe\\loupe-${os.userInfo().username}`;
 // hooks run the relay from here, not from inside the app, so every update reaches it
 const RELAY = path.join(os.homedir(), '.loupe', 'relay.js');
 const W = 760, H = 460;
@@ -203,8 +201,11 @@ function listen() {
     });
     sock.on('error', () => {});
   });
-  if (MAC) try { fs.unlinkSync(PIPE); } catch {} // stale socket from a crash; the single-instance lock means no live one
-  server.listen(PIPE);
+  // a private address, written to ~/.loupe/pipe for relay.js (pipe.js). Opened here, after the single-instance lock.
+  const addr = require('./pipe').open(path.dirname(RELAY));
+  if (MAC) try { fs.unlinkSync(addr); } catch {} // stale socket from a crash; the single-instance lock means no live one
+  server.on('error', e => console.log('pipe failed', e.message)); // the island keeps running; hooks fall back to the thread
+  server.listen(addr);
 }
 
 // tray "Check Claude Code hooks": node, the 10 relay hooks, leftovers, last event. Fix backs up settings.json first.

@@ -4,7 +4,7 @@ Install or upgrade with the Mac prompt in README.md: paste it into Claude Code o
 
 ## What changed for the Mac
 
-- Named pipe -> Unix socket at `/tmp/loupe-<user>.sock` (fixed path: `$TMPDIR` can differ between the app and hook processes).
+- Named pipe -> Unix socket at `~/.loupe/loupe.sock`, in a folder only your account can open. LOUPE writes the address to `~/.loupe/pipe` and the relay reads it.
 - relay.js reads `~/Library/Application Support/LOUPE/config.json`.
 - The Windows overlay check (koffi + user32) and `setAppUserModelId` are skipped.
 - Tray: `trayTemplate.png` / `@2x`, a 16 pt template image macOS tints for the menu bar.
