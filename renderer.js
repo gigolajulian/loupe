@@ -335,8 +335,8 @@ function renderAsk(s, waiting) {
     return;
   }
 
-  // pick, then Submit at the bottom. Held (you were at the PC): Submit answers here, and Other takes a typed answer.
-  // Mirrored (you were away): only the thread can answer, so Submit opens the session there.
+  // pick, then Submit at the bottom. Held: Submit answers here, and Other takes a typed answer.
+  // Mirrored: only the thread can answer, so the button opens the session there.
   const OTHER = '\0other', picks = {}, typed = {};
   const val = (q, l) => (l === OTHER ? typed[q.question].value.trim() : l);
   const done = () => a.questions.every(q => picks[q.question] && picks[q.question].length && picks[q.question].every(l => val(q, l)));
@@ -349,7 +349,7 @@ function renderAsk(s, waiting) {
     row.classList.toggle('typing', other);
     // typing needs keyboard focus, which LOUPE otherwise never takes; it gives it back on answer or dismiss
     if (other && label === OTHER) { window.loupe.focus(true); typed[q.question].focus(); }
-    submit.disabled = !done();
+    if (a.req) submit.disabled = !done();
   };
   a.questions.forEach(q => {
     askEl.append(el('div', 'q', q.question));
@@ -375,8 +375,9 @@ function renderAsk(s, waiting) {
     }
     askEl.append(row);
   });
-  const submit = btn(a.req ? 'Submit' : 'Submit in app', 'pri', () => { if (!done()) return; if (a.req) send(answers()); else window.loupe.open(s.id); });
-  submit.disabled = true;
+  // mirrored: Claude owns it, so the button just opens the session there, no picking needed (#14)
+  const submit = btn(a.req ? 'Submit' : 'Answer in Claude', 'pri', () => { if (!a.req) return window.loupe.open(s.id); if (done()) send(answers()); });
+  submit.disabled = !!a.req;
   const ft = el('div', 'btns');
   ft.append(submit);
   askEl.append(ft);

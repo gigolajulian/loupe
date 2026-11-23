@@ -1,6 +1,6 @@
 // Claude Code hook -> LOUPE. Fail-open: exits 0 with no output whenever LOUPE is closed or doesn't answer.
-// AskUserQuestion waits for LOUPE's answer while you're at the PC (LOUPE releases it to the thread when you're away).
-// Permissions show in the thread at once and LOUPE mirrors them, unless the tray's "Answer permissions on LOUPE" is on.
+// Questions and permissions show in the thread at once and LOUPE mirrors them. The tray's "Answer questions on LOUPE"
+// and "Answer permissions on LOUPE" make them wait for LOUPE instead (LOUPE hands them back when Claude comes to front).
 // LOUPE writes this file to ~/.loupe/relay.js on every launch. Usage in settings.json: node "<home>/.loupe/relay.js"
 const net = require('net');
 const os = require('os');
@@ -10,9 +10,9 @@ const PIPE = MAC ? `/tmp/loupe-${os.userInfo().username}.sock` : `\\\\.\\pipe\\l
 // LOUPE's app.getPath('userData')
 const CFG = MAC ? `${os.homedir()}/Library/Application Support/LOUPE/config.json` : `${process.env.APPDATA}/loupe/config.json`;
 const bail = () => process.exit(0);
-const answerOnIsland = () => {
-  try { return JSON.parse(require('fs').readFileSync(CFG, 'utf8')).answerOnIsland === true; }
-  catch { return false; }
+const cfg = () => {
+  try { return JSON.parse(require('fs').readFileSync(CFG, 'utf8')); }
+  catch { return {}; }
 };
 const quick = setTimeout(bail, 400);
 
@@ -26,10 +26,9 @@ process.stdin.on('end', () => {
   ev.orb_host = process.env.CLAUDE_CODE_HOST_SESSION_ID || ''; // Claude app session id, for claude:// links
   ev.orb_ts = Date.now();
   ev.orb_ppid = process.ppid; // LOUPE walks up from here to the session's claude.exe, to group its background tasks
-  // a held hook keeps its prompt out of the thread. Questions are always offered to LOUPE, which lets them go to
-  // the thread at once when you're away from the PC; permissions wait only with the tray's "Answer permissions on LOUPE".
-  ev.orb_wait = (ev.hook_event_name === 'PreToolUse' && ev.tool_name === 'AskUserQuestion') ||
-    (ev.hook_event_name === 'PermissionRequest' && answerOnIsland());
+  // a held hook keeps its prompt out of the thread, so only the tray switches hold one (#14)
+  const q = ev.hook_event_name === 'PreToolUse' && ev.tool_name === 'AskUserQuestion', perm = ev.hook_event_name === 'PermissionRequest';
+  ev.orb_wait = (q || perm) && cfg()[q ? 'answerQuestions' : 'answerOnIsland'] === true;
   const sock = net.connect(PIPE, () => {
     if (!ev.orb_wait) return sock.end(JSON.stringify(ev) + '\n', bail);
     clearTimeout(quick); // the hook's own timeout bounds the wait

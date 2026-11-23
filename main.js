@@ -15,8 +15,8 @@ const W = 760, H = 460;
 const sessions = new Map();
 const pending = new Map(); // req -> { sock, ev }: hooks waiting for an answer
 let seq = 0, lastEvent = 0;
-// Claude's own window is in front: new questions go straight to the thread and LOUPE stays quiet. A question LOUPE
-// already holds stays answerable here (its card has "in app" to send it to the thread instead).
+// Claude's own window is in front: Claude owns every prompt. New ones go straight to the thread, and ones LOUPE holds
+// go back to it the moment Claude comes to front, so a question never waits on both sides (#14).
 let claudeFront = false;
 let win, tray;
 
@@ -68,6 +68,11 @@ function overlayCheck(own) {
 let sentState = '', sentFront = null, sentAt = 0;
 function push() {
   if (!win || win.isDestroyed()) return;
+  // one owner per prompt: a held hook with no card that can answer it (a second relay hook, a replaced or ended
+  // session) goes back to the thread, and a card whose hook is gone stops offering Submit
+  const shown = new Set([...sessions.values()].map(s => s.ask && s.ask.req).filter(Boolean));
+  for (const [req, p] of pending) if (!shown.has(req)) { pending.delete(req); p.sock.end('null\n'); }
+  for (const s of sessions.values()) if (s.ask && s.ask.req && !pending.has(s.ask.req)) s.ask.req = undefined;
   if (claudeFront !== sentFront) { sentFront = claudeFront; win.webContents.send('front', claudeFront); }
   const list = view(sessions), json = JSON.stringify(list), now = Date.now();
   if (json === sentState && now - sentAt < 30e3) return;
@@ -147,7 +152,7 @@ function setFront(on) {
   if (on === claudeFront) return;
   claudeFront = on;
   if (process.env.LOUPE_SNAP) console.log('claude in front:', on);
-  push();
+  if (on && !process.env.LOUPE_HOLD) release(); else push(); // release() pushes
 }
 // every held prompt back to Claude Code, which then asks in the thread. The card stays, mirrored.
 function release() {
@@ -458,9 +463,11 @@ app.whenReady().then(() => {
       click: () => { cfg.procs = !cfg.procs; cfg.procsAsked = true; saveCfg(); sendCfg(); menu(); procsTick(true); } }]),
     { label: 'Sounds', type: 'checkbox', checked: cfg.sound,
       click: () => { cfg.sound = !cfg.sound; fs.writeFileSync(cfgPath, JSON.stringify(cfg)); sendCfg(); menu(); } },
-    // relay.js reads this: on, permissions and questions wait for the island and stay out of the thread until answered
+    // relay.js reads these: on, they wait for the island and stay out of the thread until answered or Claude comes to front
+    { label: 'Answer questions on LOUPE (hides them from the thread until answered)', type: 'checkbox', checked: !!cfg.answerQuestions,
+      click: () => { cfg.answerQuestions = !cfg.answerQuestions; saveCfg(); menu(); } },
     { label: 'Answer permissions on LOUPE (hides them from the thread until answered)', type: 'checkbox', checked: !!cfg.answerOnIsland,
-      click: () => { cfg.answerOnIsland = !cfg.answerOnIsland; fs.writeFileSync(cfgPath, JSON.stringify(cfg)); menu(); } },
+      click: () => { cfg.answerOnIsland = !cfg.answerOnIsland; saveCfg(); menu(); } },
     // installed app only: in dev this would register electron.exe itself
     ...(app.isPackaged ? [{ label: MAC ? 'Open at Login' : 'Start with Windows', type: 'checkbox', checked: app.getLoginItemSettings().openAtLogin,
       click: item => { app.setLoginItemSettings({ openAtLogin: item.checked }); menu(); } }] : []),
