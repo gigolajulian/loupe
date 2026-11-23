@@ -1,7 +1,7 @@
 {
   "name": "loupe",
   "productName": "LOUPE",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "description": "Top-of-screen island for Claude Code sessions",
   "author": "Julian Gigola",
