@@ -12,7 +12,7 @@
     "dist": "electron-builder --win nsis",
     "dist:mac": "sh mac/build.sh && electron-builder --mac",
     "release": "electron-builder --win nsis --publish always && node scripts/sign-release.js --upload",
-    "test": "node --test"
+    "test": "node --test && node sessions.js && node hooks.js"
   },
   "build": {
     "appId": "com.juliangigola.loupe",
@@ -21,6 +21,7 @@
     "files": [
       "main.js",
       "update-signature.js",
+      "pipe.js",
       "preload.js",
       "renderer.js",
       "sessions.js",

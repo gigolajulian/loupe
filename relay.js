@@ -6,10 +6,12 @@ const net = require('net');
 const os = require('os');
 
 const MAC = process.platform === 'darwin';
-const PIPE = MAC ? `/tmp/loupe-${os.userInfo().username}.sock` : `\\\\.\\pipe\\loupe-${os.userInfo().username}`;
 // LOUPE's app.getPath('userData')
 const CFG = MAC ? `${os.homedir()}/Library/Application Support/LOUPE/config.json` : `${process.env.APPDATA}/loupe/config.json`;
 const bail = () => process.exit(0);
+// LOUPE writes its private pipe address here on launch (pipe.js). No file: LOUPE never ran, so stay out of the way.
+let PIPE;
+try { PIPE = require('fs').readFileSync(`${os.homedir()}/.loupe/pipe`, 'utf8').trim(); } catch { bail(); }
 const cfg = () => {
   try { return JSON.parse(require('fs').readFileSync(CFG, 'utf8')); }
   catch { return {}; }

@@ -1,0 +1,4 @@
+{
+  "LOC-1": {"file": "pipe.js", "find": "crypto.randomBytes(16).toString('hex')", "replace": "require('os').userInfo().username"},
+  "REL-1": {"file": "update-signature.js", "find": "    if (!why) return null;", "replace": "    return null;"}
+}
