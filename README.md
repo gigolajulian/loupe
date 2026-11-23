@@ -75,7 +75,7 @@ Install or upgrade LOUPE on this Mac. LOUPE is a small island in the notch that 
 
 ## Updates
 
-Windows installs from 0.2.12 on update themselves: LOUPE checks this repo's releases on launch and every 4 hours, downloads in the background and installs when LOUPE quits. A download installs only if its `.sig` checks out against the release key built into LOUPE; otherwise it is refused and logged. Tray "Check for updates" checks now and shows the installed version. Once a download is ready it reads "Restart to update". Installs older than 0.2.12 need the prompt above once.
+Windows installs from 0.2.12 on update themselves: LOUPE checks this repo's releases on launch and every 4 hours, downloads in the background and asks before it installs: "LOUPE x is ready" with the release notes, Restart to update or Later (asked again after a day). From 0.3.2 on nothing installs without that yes; older builds install on quit. A download installs only if its `.sig` checks out against the release key built into LOUPE; otherwise it is refused and logged. Tray "Check for updates" checks now and shows the installed version. Once a download is ready it reads "Restart to update". The updater writes `updater.log` next to `config.json`. Installs older than 0.2.12 need the prompt above once.
 
 ## Hooks
 
