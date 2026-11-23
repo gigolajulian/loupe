@@ -75,7 +75,7 @@ Install or upgrade LOUPE on this Mac. LOUPE is a small island in the notch that 
 
 ## Updates
 
-Windows installs from 0.2.12 on update themselves: LOUPE checks this repo's releases on launch and every 4 hours, downloads in the background and installs when LOUPE quits. Tray "Check for updates" checks now and shows the installed version. Once a download is ready it reads "Restart to update". Installs older than 0.2.12 need the prompt above once.
+Windows installs from 0.2.12 on update themselves: LOUPE checks this repo's releases on launch and every 4 hours, downloads in the background and installs when LOUPE quits. A download installs only if its `.sig` checks out against the release key built into LOUPE; otherwise it is refused and logged. Tray "Check for updates" checks now and shows the installed version. Once a download is ready it reads "Restart to update". Installs older than 0.2.12 need the prompt above once.
 
 ## Hooks
 
@@ -151,9 +151,9 @@ Claude sessions can leave dev servers, log tails and watchers running after you 
 2. `node sessions.js && node hooks.js`.
 3. Publish. `GH_TOKEN` comes from the environment, never typed or pasted. With the GitHub CLI logged in:
    ```bash
-   GH_TOKEN="$(gh auth token)" npx electron-builder --win nsis --publish always
+   GH_TOKEN="$(gh auth token)" npm run release
    ```
-   This builds, uploads the installer, its `.blockmap` and `latest.yml`, and publishes the release (`releaseType: release` in package.json, not a draft).
+   This builds, uploads the installer, its `.blockmap` and `latest.yml`, publishes the release (`releaseType: release` in package.json, not a draft), then signs the installer and uploads `LOUPE-Setup-<version>.exe.sig`. Installs refuse an update without it. If signing fails after the release is up, fix it and run `node scripts/sign-release.js --upload`; installs retry at the next check. The key is `~/.release-keys/updates-ed25519.pem` on Julian's PC (or the file `RELEASE_SIGNING_KEY` points to). It never goes in a repo. If it is lost, installed copies can't update again, so keep a backup.
 4. Commit and push the source: `git commit -am "LOUPE <version>" && git push`.
 5. Check https://github.com/gigolajulian/loupe/releases/latest lists `latest.yml`. Running installs pick it up within 4 hours, or now with tray "Check for updates", and install on quit. GitHub's release feed can lag a minute or two after publishing.
 

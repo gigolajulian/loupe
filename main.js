@@ -482,6 +482,8 @@ app.whenReady().then(() => {
   if (app.isPackaged) try {
     const { autoUpdater } = require('electron-updater');
     autoUpdater.autoDownload = !MAC;
+    require('./update-signature').guard(autoUpdater, { app: 'LOUPE', log: console.log,
+      sigUrl: v => `https://github.com/gigolajulian/loupe/releases/download/v${v}/LOUPE-Setup-${v}.exe.sig` });
     autoUpdater.on('update-available', i => {
       if (!MAC) return manual && say(`Downloading LOUPE ${i.version}`, 'It installs when LOUPE quits.');
       if (!manual && told === i.version) return;

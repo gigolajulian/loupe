@@ -1,7 +1,7 @@
 {
   "name": "loupe",
   "productName": "LOUPE",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "description": "Top-of-screen island for Claude Code sessions",
   "author": "Julian Gigola",
@@ -11,7 +11,8 @@
     "icons": "sh logo/export-icons.sh",
     "dist": "electron-builder --win nsis",
     "dist:mac": "sh mac/build.sh && electron-builder --mac",
-    "release": "electron-builder --win nsis --publish always"
+    "release": "electron-builder --win nsis --publish always && node scripts/sign-release.js --upload",
+    "test": "node --test"
   },
   "build": {
     "appId": "com.juliangigola.loupe",
@@ -19,6 +20,7 @@
     "icon": "build/icon.png",
     "files": [
       "main.js",
+      "update-signature.js",
       "preload.js",
       "renderer.js",
       "sessions.js",
