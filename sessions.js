@@ -37,6 +37,7 @@ function apply(map, ev) {
   // a worktree counts as its project: ...\JG WEBSITE NEW\.claude\worktrees\determined-pike -> JG WEBSITE NEW
   const [root, wt] = (ev.cwd || '').split(/[\\/]\.claude[\\/]worktrees[\\/]/);
   s.name = base(root) || s.name || 'session';
+  s.cwd = ev.cwd || s.cwd || ''; // Processes: a leftover running from a working session's folder is still in use (#16)
   s.wt = wt ? base(wt) : '';  s.desktop = ev.orb_entry === 'claude-desktop';
   s.host = ev.orb_host || s.host || '';
   s.ts = ev.orb_ts || Date.now();
@@ -137,6 +138,7 @@ if (require.main === module) {
   apply(m, { session_id: 'c', cwd: 'C:\\P\\JG WEBSITE NEW\\.claude\\worktrees\\determined-pike-a25369', hook_event_name: 'Stop' });
   assert.equal(m.get('c').name, 'JG WEBSITE NEW');
   assert.equal(m.get('c').wt, 'determined-pike-a25369');
+  assert.equal(m.get('c').cwd, 'C:\\P\\JG WEBSITE NEW\\.claude\\worktrees\\determined-pike-a25369');
 
   assert.equal(reply(perm, 'allow').hookSpecificOutput.decision.behavior, 'allow');
   assert.equal(reply(perm, 'deny').hookSpecificOutput.decision.behavior, 'deny');

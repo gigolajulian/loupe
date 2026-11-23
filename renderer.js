@@ -552,6 +552,11 @@ const openG = new Set(), unpicked = new Set();
 const procsEl = $('procs'), procrow = $('procrow'), chipEl = $('chip'), updEl = $('upd');
 const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const hrs = h => h < 1 ? `${Math.max(1, Math.round(h * 60))}m` : h < 48 ? `${Math.round(h)}h` : `${Math.round(h / 24)}d`;
+// a leftover is still in use while under 15 min old, or while its command runs from the folder of a working
+// session (a dev server whose launching shell exited): no Kill, never suggested (#16)
+const norm = p => String(p).toLowerCase().replace(/\\/g, '/').replace(/\/+$/, '');
+const inUse = r => Date.now() - Date.parse(r.Started) < 15 * 60e3 ||
+  last.some(s => active(s) && s.cwd && norm(r.Cmd).includes(norm(s.cwd)));
 const bgCount = id => procs ? procs.sessions.filter(r => r.sid === id && r.AgeH >= YOUNG_H).length : 0;
 
 function procGroups() {
@@ -568,10 +573,10 @@ function procGroups() {
     by.get(key).rows.push(r);
   }
   const gs = [...by.values()].sort((a, b) => b.ts - a.ts);
-  if (procs.leftovers.length) gs.push({ key: '-', name: 'No session', state: 'gone', rows: procs.leftovers });
+  if (procs.leftovers.length) gs.push({ key: '-', name: 'No session', state: 'gone', rows: procs.leftovers.map(r => ({ ...r, inUse: inUse(r) })) });
   return gs;
 }
-const suggested = gs => gs.flatMap(g => g.state === 'gone' || g.state === 'idle' ? g.rows.filter(r => !r.Allowed).map(r => ({ r, g })) : []);
+const suggested = gs => gs.flatMap(g => g.state === 'gone' || g.state === 'idle' ? g.rows.filter(r => !r.Allowed && !r.inUse).map(r => ({ r, g })) : []);
 const stateWord = g => g.state === 'gone' ? 'closed or archived' : g.state === 'work' ? 'working' : `idle ${ago(g.ts)}`;
 
 function renderProcs() {
@@ -598,7 +603,7 @@ function renderProcs() {
     return `<div class="grp${open ? ' open' : ''}"><button class="gh ${g.state === 'idle' || g.state === 'quiet' ? 'idle' : g.state === 'gone' ? 'gone' : ''}" data-g="${esc(g.key)}">` +
       `<span class="nm">${esc(g.name)}</span><span class="st">${stateWord(g)}</span><span class="ct">${g.rows.length} · ${gm} MB</span><span class="cv">›</span></button>` +
       (open ? g.rows.map(r => `<div class="p${r.Allowed ? ' keep' : ''}" data-pid="${r.Pid}"><span class="n" data-open="1" title="PID ${r.Pid}">${esc(r.Label || r.Name)}${r.Allowed ? '<span class="tag">keep</span>' : ''}</span>` +
-        `<span class="m">${r.Ports ? `:${esc(r.Ports.split(',')[0])} · ` : ''}${r.MemMB} MB · ${hrs(r.AgeH)}</span><button class="x" data-kill="${r.Pid}">Kill</button>` +
+        `<span class="m">${r.Ports ? `:${esc(r.Ports.split(',')[0])} · ` : ''}${r.MemMB} MB · ${hrs(r.AgeH)}</span>${r.inUse ? '<span class="tag">in use</span>' : `<button class="x" data-kill="${r.Pid}">Kill</button>`}` +
         `<div class="cmd">PID ${r.Pid} · ${esc(r.Cmd)}</div></div>`).join('') : '') + '</div>';
   }).join('');
   h += '</div><div class="tile">';
