@@ -8,7 +8,7 @@
 
 A black island at the top of the main display that shows your live Claude Code sessions: what each one is doing, and a mirror of every permission and question. Click a project to open it in the Claude app. On a Mac it sits in the notch.
 
-Questions are answered on LOUPE while you're at the PC and go to the Claude Code thread when you're away. Permissions show in the thread and LOUPE mirrors them.
+Questions and permissions show in the Claude Code thread and LOUPE mirrors them. Turn on answering on LOUPE in the tray to pick and Submit without leaving what you're in.
 
 ## In action
 
@@ -34,7 +34,7 @@ Every hook event runs `relay.js`. The relay hands it to LOUPE over a named pipe 
 | Hover the island. Steps of one project share a row. | Cyan, a sound, and the panel opens by itself. |
 | **Question** | **Permission** |
 | <img src="docs/state-question.png" width="400" alt="Question card with numbered options and Submit"> | <img src="docs/state-permission.png" width="400" alt="Permission card with the command, Allow, Deny and Always"> |
-| Pick, then Submit, without leaving what you're in. | Mirrored from the thread, or answered here if you turn that on. |
+| Mirrored from the thread, or picked and submitted here if you turn that on. | Mirrored from the thread, or answered here if you turn that on. |
 
 ## Install or upgrade with Claude
 
@@ -102,7 +102,7 @@ Tray "Check Claude Code hooks" (or `LOUPE --check-hooks`) shows whether `node` r
 
 ## Prompts
 
-Questions wait on LOUPE while you're at the PC: pick, then Submit answers them there. While one waits, the thread doesn't show it. After 2 minutes with no keyboard or mouse, or on "in app" or ×, it goes back to the thread and LOUPE keeps a mirror of it. A question that comes in while you're away goes straight to the thread.
+Questions show in the thread and LOUPE mirrors them; "Answer in Claude" opens the session. Tray "Answer questions on LOUPE" makes them wait on LOUPE instead: pick, then Submit answers there, and the thread doesn't show it meanwhile. Each question has one owner at a time. It goes back to the thread, with LOUPE keeping a mirror, when Claude's window comes to the front, after 2 minutes with no keyboard or mouse, or on "in app" or ×. One that comes in while Claude is in front or you're away goes straight to the thread.
 
 Permissions and plan approvals show in the thread at once and LOUPE mirrors them. Tray "Answer permissions on LOUPE (hides them from the thread until answered)" makes permissions wait for the island too: Allow / Deny / Always. That's why `PreToolUse` and `PermissionRequest` have the long timeout.
 
