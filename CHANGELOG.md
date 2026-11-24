@@ -5,6 +5,7 @@ One entry per release, in plain words. The version comes from package.json only.
 ## Unreleased
 
 - Safer and steadier under the hood: a stray answer can never approve a permission, settings can't be half-written by a crash, logs and backups stay small, and errors go to a local log.
+- The first run asks before starting LOUPE with Windows (or at login on a Mac), instead of turning it on by itself.
 
 ## 0.3.2 (2026-11-24)
 

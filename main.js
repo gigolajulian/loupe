@@ -404,10 +404,16 @@ app.whenReady().then(() => {
   // quick settings live in the tray menu, saved to userData/config.json
   const cfgPath = path.join(app.getPath('userData'), 'config.json');
   const cfg = store.load(cfgPath, { closeDelay: 5000, sound: true, volume: 0.7, goo: true });
-  // first run of the installed app: start with Windows, once; the tray checkbox owns it after that
+  // first run of the installed app: ask once whether to start with Windows (EXIT-2); the tray checkbox owns it after
   if (app.isPackaged && !cfg.loginSet) {
-    app.setLoginItemSettings({ openAtLogin: true });
-    cfg.loginSet = true; store.save(cfgPath, cfg);
+    dialog.showMessageBox({ title: 'LOUPE', noLink: true, defaultId: 0, cancelId: 1,
+      message: MAC ? 'Open LOUPE when you log in?' : 'Start LOUPE with Windows?',
+      detail: `You can change this later in the tray (${MAC ? 'Open at Login' : 'Start with Windows'}).`,
+      buttons: [MAC ? 'Open at Login' : 'Start with Windows', 'Not now'],
+    }).then(({ response }) => {
+      app.setLoginItemSettings({ openAtLogin: response === 0 });
+      cfg.loginSet = true; saveCfg(); menu();
+    });
   }
   // where: 'top' = top of the main display, 'above' = bottom edge of the display stacked above it (falls back to 'top')
   const place = () => {
