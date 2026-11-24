@@ -284,7 +284,7 @@ app.whenReady().then(() => {
   };
   raise();
   win.on('always-on-top-changed', raise);
-  setInterval(raise, 1500);
+  setInterval(raise, 5000); // events cover most cases; this catches an overlay closing
   win.setIgnoreMouseEvents(true, { forward: true });
   const n = notch();
   win.loadFile('index.html', n ? { query: { notch: `${n.w}x${n.h}` } } : {});
@@ -382,7 +382,8 @@ app.whenReady().then(() => {
       try { const buf = new Uint16Array(1024), size = [1024]; return image(h, 0, buf, size) ? String.fromCharCode(...buf.subarray(0, size[0])) : ''; }
       finally { close(h); }
     };
-    setInterval(() => { try { setFront(/[\\/]claude\.exe$/i.test(exe())); } catch {} }, 1000);
+    let lastFg = 0; // the program is looked up only when the foreground window changed
+    setInterval(() => { try { const h = Number(fg()); if (h === lastFg) return; lastFg = h; setFront(/[\\/]claude\.exe$/i.test(exe())); } catch {} }, 1000);
   } catch (e) { console.log('foreground watch off', e.message); }
 
   ipcMain.on('answer', (_, { req, choice }) => {

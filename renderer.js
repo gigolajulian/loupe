@@ -130,11 +130,12 @@ function draw(c, t, w, now) {
 }
 
 // frames run only while the orb moves, blends, eases or drifts; a still orb costs nothing between kicks.
-// Drifting alone runs at 10 fps (a sub-pixel drift: 15 fps cost GPU for nothing you can see), the rest at 30.
-let raf = 0, lastDraw = 0, slow = false;
+// Drifting alone runs at 5 fps (a sub-pixel drift: more fps cost CPU and GPU for nothing you can see), the rest at 30.
+// Drifting waits on a timer, not on every display refresh: skipped rAF ticks at 60-144 Hz were most of LOUPE's idle CPU.
+let raf = 0, idle = 0, lastDraw = 0, slow = false;
 function frame(now) {
   raf = 0;
-  if (now - lastDraw < (slow ? 100 : 30)) { raf = requestAnimationFrame(frame); return; }
+  if (now - lastDraw < (slow ? 180 : 30)) { raf = requestAnimationFrame(frame); return; }
   const dt = Math.min(0.1, (now - lastDraw) / 1000);
   lastDraw = now;
   if (next && now - switchedAt >= HOLD) {
@@ -160,9 +161,10 @@ function frame(now) {
   if (w >= 1) from = null;
   const busy = !still || !settled || folding || from || next;
   slow = !busy && drifting;
-  if (busy || drifting) raf = requestAnimationFrame(frame);
+  if (busy) raf = requestAnimationFrame(frame);
+  else if (drifting) idle = setTimeout(kick, 200);
 }
-const kick = () => { if (!raf) raf = requestAnimationFrame(frame); };
+const kick = () => { clearTimeout(idle); idle = 0; if (!raf) raf = requestAnimationFrame(frame); };
 kick();
 reduce.addEventListener('change', kick);
 
