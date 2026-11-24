@@ -1,5 +1,5 @@
 diff --git a/index.html b/index.html
-index dbab06d..fe41fdd 100644
+index 7c2510f..d8091b2 100644
 --- a/index.html
 +++ b/index.html
 @@ -4,7 +4,6 @@
@@ -8,5 +8,5 @@ index dbab06d..fe41fdd 100644
  <style>
 -  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: 0s !important; animation-duration: 0s !important; } }
    :root {
-     --tile: #151517; --line: #26262a; --fg: #ececec; --dim: #8b8b91; --faint: #77777e; --accent: #5fc3d3; --danger: #9a4a4a; --danger-hover: #ad5656; --mono: "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; --sans: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+     --tile: #151517; --line: #26262a; --fg: #ececec; --dim: #a6a6ac; --faint: #939399; --accent: #5fc3d3; --danger: #9a4a4a; --danger-hover: #ad5656; --mono: "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace; --sans: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
    }
