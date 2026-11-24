@@ -164,3 +164,7 @@ Claude sessions can leave dev servers, log tails and watchers running after you 
 Mac: on the Mac, `GH_TOKEN="$(gh auth token)" npx electron-builder --mac --publish always` adds the zips and `latest-mac.yml` to the same release. Mac installs only get a "LOUPE x is out" dialog, since unsigned apps can't update in place.
 
 The packaged app's `package.json` has no `build` key (electron-builder strips it), so the app never reads its own publish config.
+
+## Licence
+
+MIT, see [LICENSE](LICENSE). The orb uses the thinking-orbs engine (MIT) and the Processes rules come from [zclean](https://github.com/TheStack-ai/zclean) (MIT).

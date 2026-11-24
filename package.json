@@ -4,6 +4,7 @@
   "version": "0.3.2",
   "private": true,
   "description": "Top-of-screen island for Claude Code sessions",
+  "license": "MIT",
   "author": "Julian Gigola",
   "main": "main.js",
   "scripts": {
