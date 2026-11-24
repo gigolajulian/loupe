@@ -61,8 +61,8 @@
  },
  "EXIT-6": {
   "file": "relay.js",
-  "find": "sock.on('error', bail);",
-  "replace": "sock.on('error', () => setTimeout(bail, 10e3));"
+  "find": "sock.on('close', bail);",
+  "replace": "sock.on('close', () => setTimeout(bail, 10e3));"
  },
  "DATA-2": {
   "file": "store.js",

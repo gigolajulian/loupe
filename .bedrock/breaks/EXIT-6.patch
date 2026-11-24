@@ -1,13 +1,13 @@
 diff --git a/relay.js b/relay.js
-index ba6c7bb..26c2b9f 100644
+index ba6c7bb..9ec615c 100644
 --- a/relay.js
 +++ b/relay.js
-@@ -36,7 +36,7 @@ process.stdin.on('end', () => {
-     clearTimeout(quick); // the hook's own timeout bounds the wait
+@@ -37,7 +37,7 @@ process.stdin.on('end', () => {
      sock.write(JSON.stringify(ev) + '\n');
    });
--  sock.on('error', bail);
-+  sock.on('error', () => setTimeout(bail, 10e3));
-   sock.on('close', bail);
+   sock.on('error', bail);
+-  sock.on('close', bail);
++  sock.on('close', () => setTimeout(bail, 10e3));
    let reply = '';
    sock.setEncoding('utf8');
+   sock.on('data', c => {

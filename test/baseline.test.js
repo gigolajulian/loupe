@@ -183,8 +183,8 @@ test('REL-2: a truncated or altered download is refused, and nothing installs wi
   global.fetch = async () => ({ ok: true, text: async () => crypto.sign(null, Buffer.from(`LOUPE 9.0.0 ${sha}\n`), privateKey).toString('base64') });
   try { assert.notStrictEqual(await u.verifySignature(file), null); } finally { global.fetch = real; }
   const main = src('main.js');
-  assert.match(main, /autoUpdater\.autoInstallOnAppQuit = false;/);
-  assert.match(main, /buttons: \['Restart to update', 'Later'\]/);
+  assert.ok(main.includes('autoUpdater.autoInstallOnAppQuit = false;'), 'updates install on quit without asking');
+  assert.ok(main.includes("buttons: ['Restart to update', 'Later']"), 'no Restart to update choice');
 });
 
 test('NET-1: a stalled signature server fails the update after the timeout instead of hanging', async () => {
@@ -250,7 +250,7 @@ test('WEB-7: process and session text is escaped before it goes into the page as
 });
 
 test('A11Y-2: motion stops for people who ask for reduced motion', () => {
-  assert.match(src('index.html'), /@media \(prefers-reduced-motion: reduce\) \{ \*, \*::before, \*::after \{ transition-duration: 0s !important; animation-duration: 0s !important; \} \}/);
+  assert.ok(src('index.html').includes('@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: 0s !important; animation-duration: 0s !important; } }'), 'no reduced-motion rule');
   assert.ok((src('renderer.js').match(/prefers-reduced-motion: reduce/g) || []).length >= 2); // the orb and the panel fold
 });
 
