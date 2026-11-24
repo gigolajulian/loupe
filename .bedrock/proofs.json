@@ -35,16 +35,16 @@
     "result": "proven",
     "command": "node scripts/checks.js SEC-1",
     "break": ".bedrock/breaks/SEC-1.patch",
-    "patch_sha256": "9ffdbb72ec618d9947e1246de900a07fb7c7aac44fef21e886e5b10fa1f950f8",
-    "sha": "a3c7a939a5067fabe8ea6b1d4ec550deca7d2f69",
+    "patch_sha256": "4cab21c46396c27ad2a14f6e179b9d7c9f53313dad9d59fc9604aa25908798a3",
+    "sha": "688b69f7e89a4dfc194f6ecfe1895c419f54b376",
     "files": {
       "scripts/checks.js": "0634616d1ed7fd292289465402ffd286c2447fe1714026dee61426a298d62b59",
-      "scripts/sign-release.js": "78f2ad8b1476b9fa24797725eb79bfb63de65c4699c5197adae494a762ea4997",
+      "scripts/sign-release.js": "160679eb5b4f70122ff7b53727024f1be3e71fa1bdbf939e92f4e901de378f9a",
       "test/baseline.test.js": "40c1a9e8f8a04feebc2dab62a7f3a9755511b0da80a72451e3f0a326f5e5b505",
       "test/pipe.test.js": "a3efd080d5a5d3122c3833d533f213f3e59e86086750d567f08edfaaa8d6700b",
       "test/update-signature.test.js": "9cd1715bf33e82dfc2000f65a1ae5bfe15c9c33cfadd75c59925fa9c9d7c99eb"
     },
-    "seconds": 5.1,
+    "seconds": 4.2,
     "date": "2026-11-24",
     "bedrock": "2.9.5"
   },
