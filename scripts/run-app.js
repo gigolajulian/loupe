@@ -27,7 +27,7 @@ function tree(all, pid) {
   return out;
 }
 
-function launch({ cfg = {}, env: extra = {} } = {}) {
+function launch({ cfg = {}, env: extra = {}, args = [] } = {}) {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'loupe-run-'));
   const appdata = path.join(home, 'AppData', 'Roaming'), userData = path.join(appdata, 'loupe');
   fs.mkdirSync(path.join(home, '.claude'), { recursive: true });
@@ -38,7 +38,7 @@ function launch({ cfg = {}, env: extra = {} } = {}) {
   const env = { ...process.env, USERPROFILE: home, HOME: home, APPDATA: appdata, LOCALAPPDATA: path.join(home, 'AppData', 'Local'), LOUPE_USERDATA: userData, ...extra };
   const electron = require('electron');
   const t0 = Date.now();
-  const proc = spawn(electron, [ROOT], { env, stdio: 'ignore' });
+  const proc = spawn(electron, [ROOT, ...args], { env, stdio: 'ignore' });
   const pipeFile = path.join(home, '.loupe', 'pipe');
   return {
     proc, home, env, t0, electron,
