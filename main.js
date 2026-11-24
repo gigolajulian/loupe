@@ -3,8 +3,11 @@ const net = require('net');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { apply, view, settle, reply } = require('./sessions');
+const { apply, view, settle, reply, lastTitle } = require('./sessions');
 const hooks = require('./hooks');
+const pipe = require('./pipe');
+const store = require('./store');
+const ipc = require('./ipc');
 
 const MAC = process.platform === 'darwin';
 // hooks run the relay from here, not from inside the app, so every update reaches it
@@ -18,9 +21,19 @@ let seq = 0, lastEvent = 0;
 let claudeFront = false;
 let win, tray;
 
+// LOUPE_USERDATA (dev, scripts/run-app.js): a scratch profile, so a test copy never shares the real one's lock or settings
+if (process.env.LOUPE_USERDATA) app.setPath('userData', process.env.LOUPE_USERDATA);
 if (!app.requestSingleInstanceLock()) process.exit(0);
-// `LOUPE --check-hooks` opens the hook check, `--fix-hooks` fixes first (for install prompts); also in the running copy
-const hookArgs = argv => { if (argv.includes('--fix-hooks')) hookCheck(true); else if (argv.includes('--check-hooks')) hookCheck(); };
+// errors and crashes to userData/loupe.log (capped), so a failure can be traced; nothing leaves the PC
+const crash = store.logger(path.join(app.getPath('userData'), 'loupe.log'));
+process.on('uncaughtException', e => crash('crash', e));
+process.on('unhandledRejection', e => crash('rejection', e));
+// `LOUPE --check-hooks` opens the hook check, `--fix-hooks` fixes first (for install prompts); also in the running copy.
+// `LOUPE --quit` closes the running copy the way the tray's Quit does.
+const hookArgs = argv => {
+  if (argv.includes('--quit')) app.quit();
+  else if (argv.includes('--fix-hooks')) hookCheck(true); else if (argv.includes('--check-hooks')) hookCheck();
+};
 app.on('second-instance', (_, argv) => hookArgs(argv));
 if (MAC) app.dock.hide(); // the packaged app has LSUIElement; this covers npm start
 else app.setAppUserModelId('com.juliangigola.loupe'); // Windows groups its icon and notifications under LOUPE
@@ -78,30 +91,20 @@ function push() {
   win.webContents.send('state', list);
 }
 
-// the session's title (the app's rename, e.g. "JG - QA") is the last agent-name line in its transcript.
-// Transcripts reach hundreds of MB, so read backwards in 1 MB steps (8 MB at most) the first time, then only
-// what was appended since. Reading the whole file on every prompt held hundreds of MB in LOUPE.
-const TITLE_RE = /"type":"agent-name","agentName":"((?:[^"\\]|\\.)*)"/g, STEP = 1 << 20, FIRST_MAX = 8 * STEP;
+// the session's title (the app's rename, e.g. "JG - QA") is the last agent-name line in its transcript (sessions.js
+// lastTitle reads at most 8 MB). Then only what was appended since. Reading the whole file held hundreds of MB.
 function readTitle(s, file) {
   s.title = s.title || '';
   if (s.titleBusy) return;
   s.titleBusy = true;
-  fs.open(file, 'r', async (err, fd) => {
+  fs.open(file, 'r', (err, fd) => {
     if (err) return void (s.titleBusy = false);
     try {
-      const size = fs.fstatSync(fd).size, from = s.titleFile === file ? s.titleAt : -1;
+      const size = fs.fstatSync(fd).size;
       const read = (pos, len) => { const b = Buffer.alloc(len); fs.readSync(fd, b, 0, len, pos); return b.toString('utf8'); };
-      let found = null;
-      if (from >= 0) { // appended part only, with a little overlap for a line cut at the old end
-        const at = Math.max(0, from - 4096, size - FIRST_MAX); // a big append: its newest 8 MB
-        if (size > at) found = [...read(at, Math.min(size - at, FIRST_MAX)).matchAll(TITLE_RE)].pop();
-      } else for (let end = size; end > 0 && size - end < FIRST_MAX && !found; end -= STEP - 4096) {
-        const at = Math.max(0, end - STEP);
-        found = [...read(at, end - at).matchAll(TITLE_RE)].pop();
-        if (!at) break;
-      }
+      const t = lastTitle(read, size, s.titleFile === file ? s.titleAt : -1);
       s.titleFile = file; s.titleAt = size;
-      if (found) { s.title = JSON.parse(`"${found[1]}"`); push(); }
+      if (t !== null) { s.title = t; push(); }
     } catch {} finally { fs.close(fd, () => {}); s.titleBusy = false; }
   });
 }
@@ -164,45 +167,38 @@ function release() {
 
 function listen() {
   const server = net.createServer(sock => {
-    let buf = '';
-    sock.setEncoding('utf8');
-    sock.on('data', c => {
-      buf += c;
-      let i;
-      while ((i = buf.indexOf('\n')) >= 0) {
-        const line = buf.slice(0, i); buf = buf.slice(i + 1);
-        let ev;
-        try { ev = JSON.parse(line); } catch { continue; }
-        lastEvent = Date.now();
-        // away, or Claude in front: straight to the thread, mirrored
-        // LOUPE_HOLD=1 (dev): hold anyway, to test the card while Claude is in front
-        if (ev.orb_wait && !process.env.LOUPE_HOLD && (away() || claudeFront)) { ev.orb_wait = false; sock.end('null\n'); }
-        if (ev.orb_wait) {
-          const req = ev.orb_req = String(++seq);
-          pending.set(req, { sock, ev });
-          if (process.env.LOUPE_SNAP) console.log('wait', new Date().toISOString(), ev.hook_event_name, ev.tool_name, ev.orb_entry);
-          // closed without our answer: decided in the app, timed out, or session stopped
-          sock.on('close', () => {
-            if (!pending.delete(req)) return;
-            if (process.env.LOUPE_SNAP) console.log('closed unanswered', new Date().toISOString(), req);
-            settle(sessions, req); push();
-          });
-        }
-        apply(sessions, ev);
-        const s = sessions.get(ev.session_id);
-        // only while Processes is on, and 3 tries per session: the hook's short-lived bash can be gone already
-        if (s && !s.pid && ev.orb_ppid && procsOn && (s.pidTries = (s.pidTries || 0) + 1) <= 3) {
-          s.pid = claudePid(ev.orb_ppid);
-          if (process.env.LOUPE_SNAP) console.log('session pid', s.name, ev.orb_ppid, '->', s.pid);
-        }
-        if (s && ev.transcript_path && (s.title === undefined || ev.hook_event_name === 'UserPromptSubmit')) readTitle(s, ev.transcript_path);
+    pipe.lines(sock, line => {
+      let ev;
+      try { ev = JSON.parse(line); } catch { return; }
+      lastEvent = Date.now();
+      // away, or Claude in front: straight to the thread, mirrored
+      // LOUPE_HOLD=1 (dev): hold anyway, to test the card while Claude is in front
+      if (ev.orb_wait && !process.env.LOUPE_HOLD && (away() || claudeFront)) { ev.orb_wait = false; sock.end('null\n'); }
+      if (ev.orb_wait) {
+        const req = ev.orb_req = String(++seq);
+        pending.set(req, { sock, ev });
+        if (process.env.LOUPE_SNAP) console.log('wait', new Date().toISOString(), ev.hook_event_name, ev.tool_name, ev.orb_entry);
+        // closed without our answer: decided in the app, timed out, or session stopped
+        sock.on('close', () => {
+          if (!pending.delete(req)) return;
+          if (process.env.LOUPE_SNAP) console.log('closed unanswered', new Date().toISOString(), req);
+          settle(sessions, req); push();
+        });
       }
+      apply(sessions, ev);
+      const s = sessions.get(ev.session_id);
+      // only while Processes is on, and 3 tries per session: the hook's short-lived bash can be gone already
+      if (s && !s.pid && ev.orb_ppid && procsOn && (s.pidTries = (s.pidTries || 0) + 1) <= 3) {
+        s.pid = claudePid(ev.orb_ppid);
+        if (process.env.LOUPE_SNAP) console.log('session pid', s.name, ev.orb_ppid, '->', s.pid);
+      }
+      if (s && ev.transcript_path && (s.title === undefined || ev.hook_event_name === 'UserPromptSubmit')) readTitle(s, ev.transcript_path);
       push();
     });
     sock.on('error', () => {});
   });
   // a private address, written to ~/.loupe/pipe for relay.js (pipe.js). Opened here, after the single-instance lock.
-  const addr = require('./pipe').open(path.dirname(RELAY));
+  const addr = pipe.open(path.dirname(RELAY));
   if (MAC) try { fs.unlinkSync(addr); } catch {} // stale socket from a crash; the single-instance lock means no live one
   server.on('error', e => console.log('pipe failed', e.message)); // the island keeps running; hooks fall back to the thread
   server.listen(addr);
@@ -242,7 +238,8 @@ function hookCheck(autoFix, onlyIfBad) {
     try {
       fs.mkdirSync(path.dirname(file), { recursive: true });
       if (fs.existsSync(file)) fs.copyFileSync(file, `${file}.bak-loupe-${new Date().toISOString().replace(/[:.]/g, '-')}`);
-      fs.writeFileSync(file, JSON.stringify(hooks.fix(settings, RELAY), null, 2) + '\n');
+      store.prune(path.dirname(file), 'settings.json.bak-loupe-', 3);
+      if (!store.save(file, JSON.stringify(hooks.fix(settings, RELAY), null, 2) + '\n')) throw new Error(`can't write ${file}`);
     } catch (e) { return dialog.showMessageBox({ type: 'error', title: 'LOUPE', message: 'Fix failed', detail: e.message }); }
     hookCheck(); // show the result
   });
@@ -271,6 +268,7 @@ app.whenReady().then(() => {
     },
   });
   lockDown(win);
+  win.webContents.on('render-process-gone', (_, d) => crash('renderer gone', d.reason));
   if (MAC) win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   // Windows drops topmost when other apps take focus or raise their own topmost windows: re-assert it,
   // except over a full-screen topmost window in front (the Snipping Tool overlay, a full-screen game)
@@ -405,12 +403,11 @@ app.whenReady().then(() => {
   if (!MAC) tray.on('click', () => tray.popUpContextMenu()); // left click opens the menu too
   // quick settings live in the tray menu, saved to userData/config.json
   const cfgPath = path.join(app.getPath('userData'), 'config.json');
-  let cfg = { closeDelay: 5000, sound: true, volume: 0.7, goo: true };
-  try { Object.assign(cfg, JSON.parse(fs.readFileSync(cfgPath, 'utf8'))); } catch {}
+  const cfg = store.load(cfgPath, { closeDelay: 5000, sound: true, volume: 0.7, goo: true });
   // first run of the installed app: start with Windows, once; the tray checkbox owns it after that
   if (app.isPackaged && !cfg.loginSet) {
     app.setLoginItemSettings({ openAtLogin: true });
-    cfg.loginSet = true; fs.writeFileSync(cfgPath, JSON.stringify(cfg));
+    cfg.loginSet = true; store.save(cfgPath, cfg);
   }
   // where: 'top' = top of the main display, 'above' = bottom edge of the display stacked above it (falls back to 'top')
   const place = () => {
@@ -430,7 +427,7 @@ app.whenReady().then(() => {
     if (!MAC) win.webContents.setZoomFactor(cfg.size === 'small' ? 0.85 : 1); // tray Size (#10); the notch keeps its fit
     win.webContents.send('config', { ...cfg, dock: place(), procsOk: !MAC });
   };
-  const saveCfg = () => fs.writeFileSync(cfgPath, JSON.stringify(cfg));
+  const saveCfg = () => store.save(cfgPath, cfg);
   // Windows: drag the island sideways along its edge (#10). dx is the cursor travel since the press.
   let dragFrom = 0;
   ipcMain.on('drag', (_, { phase, dx }) => {
@@ -458,7 +455,7 @@ app.whenReady().then(() => {
   const menu = () => tray.setContextMenu(Menu.buildFromTemplate([
     ...(MAC ? [] : [{ label: 'Where', submenu: [['top', 'Top of main screen'], ['above', 'Bottom of the screen above']].map(([v, label]) => ({
       label, type: 'radio', checked: (cfg.where || 'top') === v,
-      click: () => { cfg.where = v; fs.writeFileSync(cfgPath, JSON.stringify(cfg)); sendCfg(); menu(); },
+      click: () => { cfg.where = v; saveCfg(); sendCfg(); menu(); },
     })) }]),
     { label: 'Glass', submenu: [['clear', 'Clear'], ['dark', 'Dark'], ['solid', 'Solid']].map(([v, label]) => ({
       label, type: 'radio', checked: (cfg.glass || 'dark') === v, click: () => { cfg.glass = v; saveCfg(); sendCfg(); menu(); },
@@ -469,14 +466,14 @@ app.whenReady().then(() => {
     ...(MAC ? [] : [{ label: 'Reset position', enabled: !!cfg.dx, click: () => { cfg.dx = 0; saveCfg(); place(); menu(); } }]),
     { label: 'Close after hover', submenu: [0, 150, 300, 600, 1000, 2000, 5000].map(ms => ({
       label: ms ? `${ms / 1000} s` : 'Instant', type: 'radio', checked: cfg.closeDelay === ms,
-      click: () => { cfg.closeDelay = ms; fs.writeFileSync(cfgPath, JSON.stringify(cfg)); sendCfg(); menu(); },
+      click: () => { cfg.closeDelay = ms; saveCfg(); sendCfg(); menu(); },
     })) },
     { label: 'Gooey motion', type: 'checkbox', checked: cfg.goo,
-      click: () => { cfg.goo = !cfg.goo; fs.writeFileSync(cfgPath, JSON.stringify(cfg)); sendCfg(); menu(); } },
+      click: () => { cfg.goo = !cfg.goo; saveCfg(); sendCfg(); menu(); } },
     ...(MAC ? [] : [{ label: 'Processes (leftovers from sessions)', type: 'checkbox', checked: !!cfg.procs,
       click: () => { cfg.procs = !cfg.procs; cfg.procsAsked = true; saveCfg(); sendCfg(); menu(); procsTick(true); } }]),
     { label: 'Sounds', type: 'checkbox', checked: cfg.sound,
-      click: () => { cfg.sound = !cfg.sound; fs.writeFileSync(cfgPath, JSON.stringify(cfg)); sendCfg(); menu(); } },
+      click: () => { cfg.sound = !cfg.sound; saveCfg(); sendCfg(); menu(); } },
     // relay.js reads these: on, they wait for the island and stay out of the thread until answered or Claude comes to front
     { label: 'Answer questions on LOUPE (hides them from the thread until answered)', type: 'checkbox', checked: !!cfg.answerQuestions,
       click: () => { cfg.answerQuestions = !cfg.answerQuestions; saveCfg(); menu(); } },
@@ -509,7 +506,7 @@ app.whenReady().then(() => {
     install = () => autoUpdater.quitAndInstall(true, true); // silent, and LOUPE starts again after
     // userData/updater.log, so a missed update can be traced (#17). Starts over past 256 KB.
     const ulog = path.join(app.getPath('userData'), 'updater.log');
-    try { if (fs.statSync(ulog).size > 256 << 10) fs.unlinkSync(ulog); } catch {}
+    store.capLog(ulog, 256 << 10);
     const w = lvl => m => fs.appendFile(ulog, `${new Date().toISOString()} ${lvl} ${m}\n`, () => {});
     autoUpdater.logger = { info: w('info'), warn: w('warn'), error: w('error'), debug() {} };
     require('./update-signature').guard(autoUpdater, { app: 'LOUPE', log: autoUpdater.logger.warn,
@@ -545,12 +542,16 @@ app.whenReady().then(() => {
   // first run or broken hooks: show the check with its Fix button, so setup never fails silently
   if (/--(fix|check)-hooks/.test(process.argv.join(' '))) hookArgs(process.argv); else hookCheck(false, true);
   // the island's own sound controls, and the Processes switch
-  ipcMain.on('config', (_, patch) => { Object.assign(cfg, patch); fs.writeFileSync(cfgPath, JSON.stringify(cfg)); menu(); if ('procs' in patch) { sendCfg(); procsTick(); } });
+  ipcMain.on('config', (_, p) => { const patch = ipc.cfgPatch(p); Object.assign(cfg, patch); saveCfg(); menu(); if ('procs' in patch) { sendCfg(); procsTick(); } });
 
   // Processes (Windows): what Claude sessions left running. reap.ps1 finds them; LOUPE only shows and asks.
   // Off until turned on. Polls every 2 min while on, and when the panel opens (at most every 10 s).
-  const REAP = path.join(__dirname, 'reap', 'reap.ps1').replace('app.asar', 'app.asar.unpacked'); // PowerShell can't read inside the asar
+  // PowerShell can't read inside the asar. LOUPE_REAP (dev, scripts/exit-check.js): a stand-in scan
+  const REAP = process.env.LOUPE_REAP || path.join(__dirname, 'reap', 'reap.ps1').replace('app.asar', 'app.asar.unpacked');
   const userAllow = path.join(os.homedir(), '.claude', 'skills', 'reap', 'allow.txt');
+  // reap.ps1 appends to ~/.claude/reap.log: keep it small. A scan still running ends with LOUPE: Node puts every child
+  // in a kill-on-close job object, as long as it is not started detached (EXIT-1, scripts/exit-check.js).
+  store.capLog(path.join(os.homedir(), '.claude', 'reap.log'), 256 << 10);
   const reap = (args, done) => require('child_process').execFile('powershell.exe',
     ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', REAP, '-Json',
       '-AllowFile', fs.existsSync(userAllow) ? userAllow : path.join(path.dirname(REAP), 'allow.txt'), ...args],
@@ -576,7 +577,7 @@ app.whenReady().then(() => {
   // Kill picked rows. reap re-checks each PID's start time and command first, and logs to ~/.claude/reap.log.
   ipcMain.handle('kill', (_, pids) => new Promise(res => {
     // "pid@start": reap kills only if the PID still has the start time the panel showed (no reused PIDs)
-    pids = (pids || []).map(String).filter(p => /^\d{3,7}(@\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)?$/.test(p));
+    pids = ipc.killList(pids);
     if (MAC || !cfg.procs || !pids.length) return res([]);
     reap(['-Kill', pids.join(',')], (err, out) => { res(Array.isArray(out) ? out : [String(out || (err && err.message) || 'failed')]); procsTick(true); });
   }));

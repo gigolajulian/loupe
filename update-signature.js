@@ -18,15 +18,22 @@ function signed(app, v, sha, sig, key = PUBKEY) {
 // update-downloaded or can install; any non-null answer deletes the file and fails the update. Without a
 // code-signing certificate its own check is skipped, so ours takes its place. test/update-signature.test.js
 // fails if an electron-updater bump stops calling it.
-function guard(updater, { app, sigUrl, log = console.error, key }) {
+// the installer is hashed as a stream (it is ~100 MB), and the signature fetch gives up after timeoutMs: a stalled
+// server fails the update, which the next check (every 4 h) retries
+const sha256 = file => new Promise((res, rej) => {
+  const h = crypto.createHash('sha256');
+  fs.createReadStream(file).on('error', rej).on('data', c => h.update(c)).on('end', () => res(h.digest('hex')));
+});
+
+function guard(updater, { app, sigUrl, log = console.error, key, timeoutMs = 30e3 }) {
   let info = null;
   updater.on('update-available', (i) => { info = i; });
   updater.verifySignature = async (file) => {
     let why = 'no update info';
     try {
       if (info) {
-        const sha = crypto.createHash('sha256').update(await fs.promises.readFile(file)).digest('hex');
-        const r = await fetch(sigUrl(info.version));
+        const sha = await sha256(file);
+        const r = await fetch(sigUrl(info.version), { signal: AbortSignal.timeout(timeoutMs) });
         why = !r.ok ? `no signature (${r.status})` : signed(app, info.version, sha, await r.text(), key) ? '' : 'signature does not match';
       }
     } catch (e) { why = e.message; }
