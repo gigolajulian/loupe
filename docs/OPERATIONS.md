@@ -21,7 +21,7 @@ What LOUPE relies on:
 
 | Secret | Unlocks | Where it lives | Rotate |
 |---|---|---|---|
-| Update signing key (ed25519) | Installs accept an update signed by it | `~/.release-keys/updates-ed25519.pem` on Julian's PC, plus his backup | Make a new key, ship one release signed by the old key whose `PUBKEY` in `update-signature.js` is the new one, then sign with the new key. A lost key means installs can't update again, so the backup matters. |
+| Update signing key (ed25519) | Installs accept an update signed by it | `~/.release-keys/updates-ed25519.enc.pem` (passphrase, `scripts/protect-key.js`) on Julian's PC, plus his backup. The plain `.pem` beside it stays until CREEKY, LEADS DESKTOP and KelvinRGB, which share the key, read the protected copy | Make a new key, ship one release signed by the old key whose `PUBKEY` in `update-signature.js` is the new one, then sign with the new key. A lost key means installs can't update again, so the backup matters. |
 | `GH_TOKEN` | Publishing releases | Not stored: `gh auth token` at release time | `gh auth refresh`, or revoke the session in GitHub settings |
 
 LOUPE itself keeps no secrets on users' PCs. The pipe address in `~/.loupe/pipe` is random per launch and only the user's account can read it.
