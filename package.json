@@ -81,8 +81,8 @@
     }
   },
   "devDependencies": {
-    "electron": "^38.8.6",
-    "electron-builder": "^26.0.12"
+    "electron": "^45.4.1",
+    "electron-builder": "^26.18.0"
   },
   "dependencies": {
     "electron-updater": "^6.8.11",
@@ -90,7 +90,7 @@
     "thinking-orbs": "^0.3.1"
   },
   "allowScripts": {
-    "electron@38.8.6": true,
+    "electron@45.4.1": true,
     "electron-winstaller@5.4.0": true,
     "koffi@3.3.3": true
   }
