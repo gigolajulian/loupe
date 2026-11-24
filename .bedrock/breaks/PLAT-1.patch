@@ -1,5 +1,5 @@
 diff --git a/hooks.js b/hooks.js
-index 6c2aaa1..16ea8bd 100644
+index a930eb8..4cec06d 100644
 --- a/hooks.js
 +++ b/hooks.js
 @@ -3,7 +3,7 @@ const EVENTS = ['SessionStart', 'SessionEnd', 'UserPromptSubmit', 'PreToolUse',

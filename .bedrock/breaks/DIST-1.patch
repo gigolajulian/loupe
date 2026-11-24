@@ -1,13 +1,13 @@
 diff --git a/package.json b/package.json
-index 65c2abe..406b4b1 100644
+index 9bc679e..bbbf2b0 100644
 --- a/package.json
 +++ b/package.json
-@@ -73,7 +73,7 @@
+@@ -74,7 +74,7 @@
        "oneClick": true,
        "perMachine": false,
        "runAfterFinish": true,
--      "shortcutName": "LOUPE"
-+      "shortcutName": "electron"
+-      "shortcutName": "LOUPE",
++      "shortcutName": "electron",
+       "include": "build/installer.nsh",
+       "deleteAppDataOnUninstall": true
      },
-     "publish": {
-       "provider": "github",
