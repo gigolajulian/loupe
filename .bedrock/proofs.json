@@ -181,15 +181,15 @@
     "result": "proven",
     "command": "node --test --test-name-pattern=WEB-8: test/baseline.test.js",
     "break": ".bedrock/breaks/WEB-8.patch",
-    "patch_sha256": "af7992844b110b6e49029e1a129925b6d54bf7e028c524c6bf0d6d5e2539c905",
-    "sha": "9e08430a48615471c8a694ce84d4d5f04010d289",
+    "patch_sha256": "d1121821281579a371b2ef87da035e4241c4c453bb6b94940e64ab1dacf98380",
+    "sha": "740f25035ca5df227849fc92fa746fbb9e544c2d",
     "files": {
       "main.js": "93974eece476c4640cab58f89d2df0f881b827c102ac9396f2332f27fbbc6579",
       "test/baseline.test.js": "40c1a9e8f8a04feebc2dab62a7f3a9755511b0da80a72451e3f0a326f5e5b505",
       "test/pipe.test.js": "a3efd080d5a5d3122c3833d533f213f3e59e86086750d567f08edfaaa8d6700b",
       "test/update-signature.test.js": "9cd1715bf33e82dfc2000f65a1ae5bfe15c9c33cfadd75c59925fa9c9d7c99eb"
     },
-    "seconds": 4.5,
+    "seconds": 3.9,
     "date": "2026-11-24",
     "bedrock": "2.9.5"
   },
@@ -311,15 +311,15 @@
     "result": "proven",
     "command": "node --test --test-name-pattern=REL-2: test/baseline.test.js",
     "break": ".bedrock/breaks/REL-2.patch",
-    "patch_sha256": "792a1487cec7b98e2402149891cd04a115f4c7ddc6292d341e237c7cf341d185",
-    "sha": "9e08430a48615471c8a694ce84d4d5f04010d289",
+    "patch_sha256": "4bd1582a526361f5b3ab54becb3d1a707f54991aedd483aee11a898ad84f08f4",
+    "sha": "740f25035ca5df227849fc92fa746fbb9e544c2d",
     "files": {
       "main.js": "93974eece476c4640cab58f89d2df0f881b827c102ac9396f2332f27fbbc6579",
       "test/baseline.test.js": "40c1a9e8f8a04feebc2dab62a7f3a9755511b0da80a72451e3f0a326f5e5b505",
       "test/pipe.test.js": "a3efd080d5a5d3122c3833d533f213f3e59e86086750d567f08edfaaa8d6700b",
       "test/update-signature.test.js": "9cd1715bf33e82dfc2000f65a1ae5bfe15c9c33cfadd75c59925fa9c9d7c99eb"
     },
-    "seconds": 4.1,
+    "seconds": 4.0,
     "date": "2026-11-24",
     "bedrock": "2.9.5"
   },
@@ -490,8 +490,8 @@
     "result": "proven",
     "command": "node scripts/checks.js REL-9",
     "break": ".bedrock/breaks/REL-9.patch",
-    "patch_sha256": "a1e2ebb2e08084a423cfd4534e6c01c7c161ec6e866b79f9f9cc1bba2fd81823",
-    "sha": "9e08430a48615471c8a694ce84d4d5f04010d289",
+    "patch_sha256": "1b68bb86a6ce89c09ff911e4af6938953cf373fb42891dba77d2970cb4f1b342",
+    "sha": "740f25035ca5df227849fc92fa746fbb9e544c2d",
     "files": {
       "main.js": "93974eece476c4640cab58f89d2df0f881b827c102ac9396f2332f27fbbc6579",
       "scripts/checks.js": "0634616d1ed7fd292289465402ffd286c2447fe1714026dee61426a298d62b59",
@@ -499,7 +499,7 @@
       "test/pipe.test.js": "a3efd080d5a5d3122c3833d533f213f3e59e86086750d567f08edfaaa8d6700b",
       "test/update-signature.test.js": "9cd1715bf33e82dfc2000f65a1ae5bfe15c9c33cfadd75c59925fa9c9d7c99eb"
     },
-    "seconds": 3.8,
+    "seconds": 3.7,
     "date": "2026-11-24",
     "bedrock": "2.9.5"
   },
