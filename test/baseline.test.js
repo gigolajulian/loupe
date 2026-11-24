@@ -133,18 +133,6 @@ test('MEM-6: memory stays under a ceiling after 50,000 hook events from 50,000 s
   assert.ok(grew < 20, `heap grew ${grew.toFixed(1)} MB`);
 });
 
-test('EXIT-3: hooks from an old or dev-folder LOUPE are found and removed, only ~/.loupe/relay.js stays', () => {
-  const relay = 'C:\\Users\\X\\.loupe\\relay.js';
-  const settings = { hooks: { Stop: [
-    { hooks: [{ type: 'command', command: 'node "C:/Users/X/Documents/Claude/Projects/LOUPE/relay.js"', timeout: 5 }] },
-    { hooks: [{ type: 'command', command: 'node C:/Users/X/Documents/Claude/Projects/LOUPE/.claude/worktrees/a-b/relay.js' }] },
-  ] } };
-  assert.strictEqual(hooks.check(settings, relay).stale.length, 2);
-  const fixed = JSON.stringify(hooks.fix(settings, relay));
-  assert.ok(!/Projects/.test(fixed), 'a hook still points into a dev folder');
-  assert.ok(hooks.check(hooks.fix(settings, relay), relay).ok);
-});
-
 test('EXIT-5: logs and settings backups stay bounded', () => {
   const dir = tmp();
   for (let i = 0; i < 10; i++) fs.writeFileSync(path.join(dir, `settings.json.bak-loupe-2026-11-${String(10 + i)}T00-00-00-000Z`), '{}');
@@ -285,4 +273,15 @@ test('REL-10: CI tests every OS LOUPE ships to, on every push and PR', () => {
   assert.match(ci, /runs-on: \$\{\{ matrix\.os \}\}/);
   assert.match(ci, /on:\s*\n\s+push:\s*\n\s+branches: \[main\]\s*\n\s+pull_request:/);
   assert.match(ci, /run: npm test/);
+});
+
+test('WEB-8: no shell strings or eval in shipped code; processes start from argument arrays', () => {
+  const pkg = JSON.parse(src('package.json'));
+  for (const f of pkg.build.files.filter(f => f.endsWith('.js'))) {
+    const t = src(f);
+    assert.ok(!/\bexec(Sync)?\(/.test(t), `${f} runs a command string`);
+    assert.ok(!/shell:\s*true/.test(t), `${f} uses shell: true`);
+    assert.ok(!/\beval\(|new Function\(/.test(t), `${f} uses eval`);
+  }
+  assert.ok(!/Invoke-Expression|\biex\b/i.test(src('reap/reap.ps1')));
 });

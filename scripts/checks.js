@@ -57,15 +57,18 @@ const CHECKS = {
     }
     if (!/crypto\.randomBytes\(16\)/.test(read('pipe.js'))) fail('the pipe name is not from crypto.randomBytes');
   },
-  // no shell strings, no eval
-  'WEB-8'() {
-    for (const f of APP.filter(f => f.endsWith('.js'))) {
-      const t = read(f);
-      for (const [re, what] of [[/\bexec(Sync)?\(/, 'exec with a command string'], [/shell:\s*true/, 'shell: true'],
-        [/\beval\(|new Function\(/, 'eval']]) if (re.test(t)) fail(`${f}: ${what}`);
-    }
-    const ps = read('reap/reap.ps1');
-    if (/Invoke-Expression|\biex\b/i.test(ps)) fail('reap.ps1 uses Invoke-Expression');
+  // hooks from an old, dev-folder or worktree LOUPE are found, and Fix hooks leaves only ~/.loupe/relay.js
+  'EXIT-3'() {
+    const hooks = require('../hooks'), relay = 'C:\Users\X\.loupe\relay.js';
+    const settings = { hooks: { Stop: [
+      { hooks: [{ type: 'command', command: 'node "C:/Users/X/Documents/Claude/Projects/LOUPE/relay.js"', timeout: 5 }] },
+      { hooks: [{ type: 'command', command: 'node C:/Users/X/Documents/Claude/Projects/LOUPE/.claude/worktrees/a-b/relay.js' }] },
+    ] } };
+    if (hooks.check(settings, relay).stale.length !== 2) fail('old relay paths are not all flagged');
+    const fixed = hooks.fix(settings, relay);
+    if (/Projects/.test(JSON.stringify(fixed))) fail('after Fix hooks a hook still points into a dev folder');
+    if (!hooks.check(fixed, relay).ok) fail('Fix hooks does not leave exactly the LOUPE hooks');
+    if (/setLoginItemSettings\(\{ openAtLogin: true \}\)/.test(read('main.js')) && !/app\.isPackaged && !cfg\.loginSet/.test(read('main.js'))) fail('the login item can be set from a dev copy');
   },
   // no trackers or third-party calls: the only remote host is this repo's GitHub releases
   'PRIV-1'() {
