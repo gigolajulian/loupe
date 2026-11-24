@@ -41,6 +41,7 @@ const run = (cmd, args, env, input) => new Promise(res => {
   let out = '', err = '';
   p.stdout.on('data', c => { out += c; }); p.stderr.on('data', c => { err += c; });
   p.on('exit', code => res({ code, out, err }));
+  p.stdin.on('error', () => {}); // a child that exits before reading stdin: EPIPE on macOS
   p.stdin.end(input);
 });
 
@@ -212,6 +213,7 @@ test('PLAT-1: hooks work from a home with spaces, non-ASCII and a long path', as
   try {
     await new Promise(res => {
       const p = exec(hooks.command(relay), { env }, () => res());
+      p.stdin.on('error', () => {});
       p.stdin.end(JSON.stringify({ session_id: 's', hook_event_name: 'Stop', cwd: 'C:\\Users\\Jö\\Мой проект' }));
     });
     await new Promise(r => setTimeout(r, 100));
