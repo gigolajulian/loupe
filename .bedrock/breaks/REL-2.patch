@@ -1,8 +1,8 @@
 diff --git a/main.js b/main.js
-index 31a73c1..da50b4a 100644
+index cc461d9..ffc37ef 100644
 --- a/main.js
 +++ b/main.js
-@@ -508,7 +508,7 @@ app.whenReady().then(() => {
+@@ -509,7 +509,7 @@ app.whenReady().then(() => {
    if (app.isPackaged) try {
      const { autoUpdater } = require('electron-updater');
      autoUpdater.autoDownload = !MAC;

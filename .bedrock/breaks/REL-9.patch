@@ -1,8 +1,8 @@
 diff --git a/main.js b/main.js
-index 31a73c1..db0871d 100644
+index cc461d9..bb311be 100644
 --- a/main.js
 +++ b/main.js
-@@ -495,7 +495,7 @@ app.whenReady().then(() => {
+@@ -496,7 +496,7 @@ app.whenReady().then(() => {
      } }] : []),
      { label: 'Check Claude Code hooks', click: () => hookCheck() },
      ready ? { label: `Restart to update to ${ready}`, click: () => install() }
