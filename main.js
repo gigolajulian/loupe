@@ -248,6 +248,13 @@ function hookCheck(autoFix, onlyIfBad) {
   });
 }
 
+// The windows only show LOUPE's own page: no navigation away, no popups; http(s) links open in the browser.
+const httpUrl = u => { try { return ['http:', 'https:'].includes(new URL(u).protocol); } catch { return false; } };
+function lockDown(w) {
+  w.webContents.on('will-navigate', e => e.preventDefault());
+  w.webContents.setWindowOpenHandler(({ url }) => { if (httpUrl(url)) shell.openExternal(url); return { action: 'deny' }; });
+}
+
 app.whenReady().then(() => {
   try { fs.mkdirSync(path.dirname(RELAY), { recursive: true }); fs.copyFileSync(path.join(__dirname, 'relay.js'), RELAY); }
   catch (e) { console.log('relay copy failed', e.message); }
@@ -258,8 +265,12 @@ app.whenReady().then(() => {
     alwaysOnTop: true, skipTaskbar: true, focusable: false, hasShadow: false,
     // Mac: a panel floats over full-screen apps; larger-than-screen lets a frameless window sit over the menu bar at y=0
     ...(MAC ? { type: 'panel', enableLargerThanScreen: true } : {}),
-    webPreferences: { preload: path.join(__dirname, 'preload.js'), autoplayPolicy: 'no-user-gesture-required' }, // cues play unclicked
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true,
+      autoplayPolicy: 'no-user-gesture-required', // cues play unclicked
+    },
   });
+  lockDown(win);
   if (MAC) win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   // Windows drops topmost when other apps take focus or raise their own topmost windows: re-assert it,
   // except over a full-screen topmost window in front (the Snipping Tool overlay, a full-screen game)
@@ -289,7 +300,9 @@ app.whenReady().then(() => {
       show: false, frame: false, resizable: false, movable: false, focusable: false, skipTaskbar: true, type: 'panel',
       vibrancy: 'hud', visualEffectState: 'active', backgroundColor: '#00000000', roundedCorners: true, hasShadow: false, width: 100, height: 100, // no shadow: it reads as part of the menu bar
       enableLargerThanScreen: true, // its top edge sits above the screen, so only the bottom corners show rounded
+      webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
     });
+    lockDown(glass);
     glass.setIgnoreMouseEvents(true);
     glass.setAlwaysOnTop(true, 'pop-up-menu'); // over the menu bar, so panel and bar read as one surface; LOUPE's own window stays above
     glass.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
