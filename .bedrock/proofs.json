@@ -393,15 +393,15 @@
     "command": "node scripts/checks.js DIST-1",
     "break": ".bedrock/breaks/DIST-1.patch",
     "patch_sha256": "d62d1e550c384f9356715924c0542c3b1c7ebba42858da641774859e28a9e984",
-    "sha": "30802a84c2ae82bb1d60913d4eed2324ff338bef",
+    "sha": "d896ab655a985e55286242dd6b9572a16c453779",
     "files": {
-      "package.json": "27a3bd85ff95514c71962efe63d55b1364b5ad347d914de2194f5a8a93cd9da5",
+      "package.json": "271663cc0ac81ac98783ce612b84d313e677239de382904aafa277e23cded6f2",
       "scripts/checks.js": "0634616d1ed7fd292289465402ffd286c2447fe1714026dee61426a298d62b59",
       "test/baseline.test.js": "40c1a9e8f8a04feebc2dab62a7f3a9755511b0da80a72451e3f0a326f5e5b505",
       "test/pipe.test.js": "a3efd080d5a5d3122c3833d533f213f3e59e86086750d567f08edfaaa8d6700b",
       "test/update-signature.test.js": "9cd1715bf33e82dfc2000f65a1ae5bfe15c9c33cfadd75c59925fa9c9d7c99eb"
     },
-    "seconds": 4.2,
+    "seconds": 3.6,
     "date": "2026-11-24",
     "bedrock": "2.9.5"
   },
