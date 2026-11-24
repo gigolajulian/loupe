@@ -167,5 +167,10 @@
   "file": ".github/workflows/test.yml",
   "find": "os: [windows-latest, macos-latest]",
   "replace": "os: [windows-latest]"
+ },
+ "UX-2": {
+  "file": "index.html",
+  "find": "--faint: #939399;",
+  "replace": "--faint: #77777e;"
  }
 }
