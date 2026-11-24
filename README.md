@@ -136,7 +136,7 @@ Claude sessions can leave dev servers, log tails and watchers running after you 
 - The relay fails open. If LOUPE is closed, it exits at once and Claude Code works as usual.
 - `~/.claude/settings.json` is backed up to `settings.json.bak-loupe-<time>` before LOUPE changes a hook. Other hooks stay.
 - Update checks and downloads from this repo's GitHub releases are the only network use.
-- What LOUPE keeps, all on the PC, all plain files you can open or copy: tray settings in `config.json`, `updater.log` and `loupe.log` (errors) in its app data folder (`%APPDATA%\loupe`, Mac `~/Library/Application Support/LOUPE`), each trimmed past 256 KB. The 3 newest `settings.json.bak-loupe-*` backups; older ones are removed. `~/.claude/reap.log` (Processes kills, tokens masked), trimmed past 256 KB. Sessions live in memory only and drop after 12 hours idle.
+- What LOUPE keeps, all on the PC, all plain files you can open or copy: tray settings in `config.json`, `updater.log` and `loupe.log` (errors) in its app data folder (`%APPDATA%\loupe`, Mac `~/Library/Application Support/LOUPE`), each trimmed past 256 KB. Up to 3 `settings.json.bak-loupe-*` backups: the first one (your settings from before LOUPE) and the newest 2. `~/.claude/reap.log` (Processes kills, tokens masked), trimmed past 256 KB. Sessions live in memory only and drop after 12 hours idle.
 
 ## Dev
 
