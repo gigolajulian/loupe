@@ -276,3 +276,13 @@ test('PRIV-2: reap.log masks tokens and keys in the command lines it records', {
   assert.match(log, /killed pid=\d+.*--api-token=\*\*\*/);
   assert.ok(!/-secret/.test(log), log);
 });
+
+test('REL-10: CI tests every OS LOUPE ships to, on every push and PR', () => {
+  const pkg = JSON.parse(src('package.json')), ci = src('.github/workflows/test.yml');
+  const want = [pkg.build.win && 'windows-latest', pkg.build.mac && 'macos-latest'].filter(Boolean);
+  const matrix = (ci.match(/os: \[([^\]]*)\]/) || [, ''])[1].split(',').map(x => x.trim());
+  for (const os of want) assert.ok(matrix.includes(os), `CI does not test on ${os}`);
+  assert.match(ci, /runs-on: \$\{\{ matrix\.os \}\}/);
+  assert.match(ci, /on:\s*\n\s+push:\s*\n\s+branches: \[main\]\s*\n\s+pull_request:/);
+  assert.match(ci, /run: npm test/);
+});

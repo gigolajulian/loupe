@@ -119,13 +119,6 @@ const CHECKS = {
       if (/actions\/checkout/.test(w) && !/persist-credentials: false/.test(w)) fail('checkout keeps its credentials');
     }
   },
-  // every OS LOUPE ships to runs the tests on every change
-  'REL-10'() {
-    const want = [pkg.build.win && 'windows-latest', pkg.build.mac && 'macos-latest'].filter(Boolean);
-    const test = read('.github/workflows/test.yml');
-    for (const os of want) if (!new RegExp(`os: \\[[^\\]]*\\b${os}\\b`).test(test)) fail(`CI does not test on ${os}`);
-    if (!/runs-on: \$\{\{ matrix\.os \}\}/.test(test)) fail('the test job does not run on the matrix');
-  },
 };
 
 const id = process.argv[2];

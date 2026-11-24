@@ -85,7 +85,7 @@ Detected: has web pages (index.html); a project with dependencies (package.json)
 | A11Y-4 | desktop, web | open |  |  |  |  | needs a person: NVDA pass. Blocked by the A11Y-1 decision (the window takes no focus). |
 | A11Y-5 | web | open |  |  |  |  | same decision as A11Y-1: the .link buttons are 22 px (under 24); dragging the island has a non-drag "Reset position" in the tray. |
 | DATA-4 | any | open |  |  |  |  | follows DATA-1: n/a if DATA-1 is n/a. |
-| REL-10 | any | pass | script | `node scripts/checks.js REL-10` | .bedrock/breaks/REL-10.patch |  | Added macos-latest to the CI matrix next to windows-latest (public repo: no runner cost). |
+| REL-10 | any | pass | ci | `node --test --test-name-pattern=REL-10: test/baseline.test.js` | .bedrock/breaks/REL-10.patch |  | Added macos-latest to the CI matrix next to windows-latest (public repo: no runner cost). CI runs this test through npm test. |
 | REL-9 | any | pass | script | `node scripts/checks.js REL-9` | .bedrock/breaks/REL-9.patch |  | Version lives only in package.json (app.getVersion, installer, update feed). Added CHANGELOG.md with an entry per release. |
 | REL-7 | any | pass | script | `node scripts/checks.js REL-7` | .bedrock/breaks/REL-7.patch |  | Workflow: contents read, actions pinned by SHA, persist-credentials false, no pull_request_target or secrets. |
 | A11Y-6 | desktop, web | open |  |  |  |  | same decision as A11Y-1: the Other text box on question cards has a placeholder, no label. |
