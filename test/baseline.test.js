@@ -148,6 +148,24 @@ test('EXIT-5: logs and settings backups stay bounded', () => {
   assert.ok(kept.length <= 64 << 10 && kept.startsWith('line ') && kept.endsWith('line 19999\n'));
 });
 
+test('EXIT-2: uninstall takes out the LOUPE hooks and ~/.loupe, keeps every other hook, backs up settings', async () => {
+  const home = tmp(), claude = path.join(home, '.claude'), dot = path.join(home, '.loupe'), file = path.join(claude, 'settings.json');
+  fs.mkdirSync(claude); fs.mkdirSync(dot); fs.writeFileSync(path.join(dot, 'relay.js'), '');
+  const relay = path.join(dot, 'relay.js');
+  const mine = hooks.fix({ model: 'opus', hooks: { Stop: [{ hooks: [{ type: 'command', command: 'say done' }] }] } }, relay);
+  mine.hooks.Notification.push({ hooks: [{ type: 'command', command: 'node C:/coucou/hook.js' }] });
+  fs.writeFileSync(file, JSON.stringify(mine));
+  const r = await run(require('electron'), [ROOT, '--uninstall'],
+    { ...process.env, USERPROFILE: home, HOME: home, LOUPE_USERDATA: path.join(home, 'ud') }, '');
+  assert.equal(r.code, 0, r.err);
+  const after = JSON.parse(fs.readFileSync(file, 'utf8')), cmds = JSON.stringify(after.hooks);
+  assert.ok(!/relay\.js/.test(cmds), 'a LOUPE hook is left: ' + cmds);
+  assert.ok(cmds.includes('say done') && cmds.includes('coucou'), 'another hook was removed: ' + cmds);
+  assert.equal(after.model, 'opus');
+  assert.ok(!fs.existsSync(dot), '~/.loupe is left');
+  assert.ok(fs.existsSync(file + '.bak-loupe-uninstall'), 'no backup');
+});
+
 test('EXIT-6: when LOUPE dies holding a prompt, the relay exits at once with no answer (Claude asks in the thread)', async () => {
   const home = tmp();
   const { server, env } = await fakeLoupe(home, s => s.once('data', () => s.destroy())); // LOUPE gone mid-prompt

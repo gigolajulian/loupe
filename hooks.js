@@ -22,26 +22,35 @@ function check(settings, relay) {
   return { events, stale, coucou, ok: events.every(e => e.ok) && !stale.length && !coucou.length };
 }
 
-// drops every LOUPE and Coucou hook, then adds one LOUPE entry per event. Other hooks stay as they are.
-function fix(settings, relay) {
+// a copy without the hooks whose command matches drop; groups and events left empty go too
+function strip(settings, drop) {
   const out = JSON.parse(JSON.stringify(settings || {}));
   const hooks = out.hooks = out.hooks || {};
   for (const name of Object.keys(hooks)) {
     if (!Array.isArray(hooks[name])) continue;
     hooks[name] = hooks[name].flatMap(g => {
       if (!Array.isArray(g.hooks)) return [g];
-      const keep = g.hooks.filter(h => !isLoupe(h.command || '') && !isCoucou(h.command || ''));
+      const keep = g.hooks.filter(h => !drop(h.command || ''));
       return keep.length === g.hooks.length ? [g] : keep.length ? [{ ...g, hooks: keep }] : [];
     });
     if (!hooks[name].length) delete hooks[name];
   }
+  return out;
+}
+
+// uninstall: every LOUPE hook out, everything else (Coucou included) as it was
+const remove = settings => strip(settings, isLoupe);
+
+// drops every LOUPE and Coucou hook, then adds one LOUPE entry per event. Other hooks stay as they are.
+function fix(settings, relay) {
+  const out = strip(settings, c => isLoupe(c) || isCoucou(c)), hooks = out.hooks;
   for (const name of EVENTS) {
     (hooks[name] = hooks[name] || []).push({ hooks: [{ type: 'command', command: command(relay), timeout: timeout(name) }] });
   }
   return out;
 }
 
-module.exports = { EVENTS, check, fix, command };
+module.exports = { EVENTS, check, fix, remove, command };
 
 if (require.main === module) {
   const assert = require('assert');

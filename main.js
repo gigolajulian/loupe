@@ -23,6 +23,21 @@ let win, tray;
 
 // LOUPE_USERDATA (dev, scripts/run-app.js): a scratch profile, so a test copy never shares the real one's lock or settings
 if (process.env.LOUPE_USERDATA) app.setPath('userData', process.env.LOUPE_USERDATA);
+// `LOUPE --uninstall`: the Windows uninstaller runs it (not on updates, build/installer.nsh). Takes out LOUPE's hooks,
+// its login item and ~/.loupe; other hooks stay. Settings are backed up first.
+if (process.argv.includes('--uninstall')) {
+  if (app.isPackaged) app.setLoginItemSettings({ openAtLogin: false });
+  const file = path.join(os.homedir(), '.claude', 'settings.json');
+  let ok = !fs.existsSync(file);
+  if (!ok) try {
+    const before = JSON.parse(fs.readFileSync(file, 'utf8')), after = hooks.remove(before);
+    if (JSON.stringify(after) === JSON.stringify(before)) ok = true;
+    else { fs.copyFileSync(file, `${file}.bak-loupe-uninstall`); ok = store.save(file, JSON.stringify(after, null, 2) + '\n'); }
+  } catch {}
+  // hooks still pointing at a deleted relay would error on every event, so the relay goes only once they are out
+  if (ok) fs.rmSync(path.dirname(RELAY), { recursive: true, force: true });
+  process.exit(ok ? 0 : 1);
+}
 if (!app.requestSingleInstanceLock() || process.argv.includes('--quit')) process.exit(0); // --quit with no copy running: nothing to do
 // errors and crashes to userData/loupe.log (capped), so a failure can be traced; nothing leaves the PC
 const crash = store.logger(path.join(app.getPath('userData'), 'loupe.log'));

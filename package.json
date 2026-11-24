@@ -74,7 +74,9 @@
       "oneClick": true,
       "perMachine": false,
       "runAfterFinish": true,
-      "shortcutName": "LOUPE"
+      "shortcutName": "LOUPE",
+      "include": "build/installer.nsh",
+      "deleteAppDataOnUninstall": true
     },
     "publish": {
       "provider": "github",
