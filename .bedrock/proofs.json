@@ -182,14 +182,14 @@
     "command": "node --test --test-name-pattern=WEB-8: test/baseline.test.js",
     "break": ".bedrock/breaks/WEB-8.patch",
     "patch_sha256": "af7992844b110b6e49029e1a129925b6d54bf7e028c524c6bf0d6d5e2539c905",
-    "sha": "a3c7a939a5067fabe8ea6b1d4ec550deca7d2f69",
+    "sha": "9e08430a48615471c8a694ce84d4d5f04010d289",
     "files": {
-      "main.js": "72e6815c08188e41e511ba87a556ecd89d8d0240540185503196fb9fda5ec848",
+      "main.js": "93974eece476c4640cab58f89d2df0f881b827c102ac9396f2332f27fbbc6579",
       "test/baseline.test.js": "40c1a9e8f8a04feebc2dab62a7f3a9755511b0da80a72451e3f0a326f5e5b505",
       "test/pipe.test.js": "a3efd080d5a5d3122c3833d533f213f3e59e86086750d567f08edfaaa8d6700b",
       "test/update-signature.test.js": "9cd1715bf33e82dfc2000f65a1ae5bfe15c9c33cfadd75c59925fa9c9d7c99eb"
     },
-    "seconds": 3.8,
+    "seconds": 4.5,
     "date": "2026-11-24",
     "bedrock": "2.9.5"
   },
@@ -312,9 +312,9 @@
     "command": "node --test --test-name-pattern=REL-2: test/baseline.test.js",
     "break": ".bedrock/breaks/REL-2.patch",
     "patch_sha256": "792a1487cec7b98e2402149891cd04a115f4c7ddc6292d341e237c7cf341d185",
-    "sha": "a3c7a939a5067fabe8ea6b1d4ec550deca7d2f69",
+    "sha": "9e08430a48615471c8a694ce84d4d5f04010d289",
     "files": {
-      "main.js": "72e6815c08188e41e511ba87a556ecd89d8d0240540185503196fb9fda5ec848",
+      "main.js": "93974eece476c4640cab58f89d2df0f881b827c102ac9396f2332f27fbbc6579",
       "test/baseline.test.js": "40c1a9e8f8a04feebc2dab62a7f3a9755511b0da80a72451e3f0a326f5e5b505",
       "test/pipe.test.js": "a3efd080d5a5d3122c3833d533f213f3e59e86086750d567f08edfaaa8d6700b",
       "test/update-signature.test.js": "9cd1715bf33e82dfc2000f65a1ae5bfe15c9c33cfadd75c59925fa9c9d7c99eb"
@@ -491,15 +491,15 @@
     "command": "node scripts/checks.js REL-9",
     "break": ".bedrock/breaks/REL-9.patch",
     "patch_sha256": "a1e2ebb2e08084a423cfd4534e6c01c7c161ec6e866b79f9f9cc1bba2fd81823",
-    "sha": "a3c7a939a5067fabe8ea6b1d4ec550deca7d2f69",
+    "sha": "9e08430a48615471c8a694ce84d4d5f04010d289",
     "files": {
-      "main.js": "72e6815c08188e41e511ba87a556ecd89d8d0240540185503196fb9fda5ec848",
+      "main.js": "93974eece476c4640cab58f89d2df0f881b827c102ac9396f2332f27fbbc6579",
       "scripts/checks.js": "0634616d1ed7fd292289465402ffd286c2447fe1714026dee61426a298d62b59",
       "test/baseline.test.js": "40c1a9e8f8a04feebc2dab62a7f3a9755511b0da80a72451e3f0a326f5e5b505",
       "test/pipe.test.js": "a3efd080d5a5d3122c3833d533f213f3e59e86086750d567f08edfaaa8d6700b",
       "test/update-signature.test.js": "9cd1715bf33e82dfc2000f65a1ae5bfe15c9c33cfadd75c59925fa9c9d7c99eb"
     },
-    "seconds": 3.5,
+    "seconds": 3.8,
     "date": "2026-11-24",
     "bedrock": "2.9.5"
   },
