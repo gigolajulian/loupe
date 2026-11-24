@@ -22,6 +22,8 @@
       "main.js",
       "update-signature.js",
       "pipe.js",
+      "store.js",
+      "ipc.js",
       "preload.js",
       "renderer.js",
       "sessions.js",

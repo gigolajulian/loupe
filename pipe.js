@@ -16,7 +16,7 @@ function open(dir, mac = process.platform === 'darwin') {
 }
 
 // one hook event per line. A line past max chars drops the connection: a stuck or hostile writer can't grow the buffer.
-const MAX_LINE = 4 << 20; // a hook event with a big tool input stays far under this
+const MAX_LINE = 16 << 20; // a Write of a few MB still fits; a bigger event just isn't shown
 function lines(sock, onLine, max = MAX_LINE) {
   let buf = '';
   sock.setEncoding('utf8');

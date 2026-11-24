@@ -104,6 +104,10 @@ const CHECKS = {
     if (b.productName !== 'LOUPE' || pkg.productName !== 'LOUPE') fail('productName is not LOUPE');
     if (!b.appId || !pkg.author) fail('no appId or author (publisher)');
     if (!b.icon || !fs.existsSync(path.join(ROOT, b.icon))) fail(`icon ${b.icon} missing`);
+    // every local module the app loads is in the installer, or the installed app can't start
+    for (const f of b.files.filter(f => f.endsWith('.js'))) for (const m of read(f).matchAll(/require\('\.\/([\w-]+)'\)/g)) {
+      if (!b.files.includes(`${m[1]}.js`)) fail(`${f} loads ./${m[1]}, which build.files leaves out of the installer`);
+    }
     if (!(b.win && b.win.target === 'nsis') || !b.nsis || b.nsis.shortcutName !== 'LOUPE') fail('Windows build is not the named LOUPE installer');
   },
   // one version (package.json, which the app, the installer and the update feed read) and a notes entry for it

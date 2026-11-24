@@ -101,8 +101,11 @@ function Find-SessionProcs($snap) {
 
 # Command lines can carry tokens and keys: reap.log gets them masked (PRIV-2).
 function Hide-Secrets([string]$cmd) {
-  $c = $cmd -replace '(?i)((?:--?|)[\w.-]*(?:token|key|secret|password|passwd|pwd|auth)[\w.-]*(?:=|:|\s+))("[^"]*"|\S+)', '$1***'
-  $c -replace '(?i)(?:gh[pousr]_|github_pat_|sk-|xox[abprs]-|AKIA)[\w-]{8,}', '***'
+  $v = '("[^"]*"|''[^'']*''|[^\s"]+)'
+  $c = $cmd -replace "(?i)(\s--?[\w.-]*(?:token|key|secret|password|passwd|pwd|auth)[\w.-]*(?:=|\s+))$v", '$1***'
+  $c = $c -replace "(?i)(\b[\w.-]*(?:token|key|secret|password|passwd|pwd)[\w.-]*\s*[=:]\s*)$v", '$1***'
+  $c = $c -replace '(?i)\bBearer\s+[\w.~+/=-]+', 'Bearer ***' -replace '\beyJ[\w-]+\.[\w-]+\.[\w-]*', '***'
+  $c -replace '(?i)(?<![\w-])(?:gh[pousr]_|github_pat_|sk-|xox[abprs]-|AKIA)[\w-]{8,}', '***'
 }
 
 function Stop-Leftover($snap, $row) {

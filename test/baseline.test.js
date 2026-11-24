@@ -138,8 +138,8 @@ test('EXIT-5: logs and settings backups stay bounded', () => {
   for (let i = 0; i < 10; i++) fs.writeFileSync(path.join(dir, `settings.json.bak-loupe-2026-11-${String(10 + i)}T00-00-00-000Z`), '{}');
   fs.writeFileSync(path.join(dir, 'settings.json'), '{}');
   store.prune(dir, 'settings.json.bak-loupe-', 3);
-  assert.deepStrictEqual(fs.readdirSync(dir).sort(), ['settings.json', 'settings.json.bak-loupe-2026-11-17T00-00-00-000Z',
-    'settings.json.bak-loupe-2026-11-18T00-00-00-000Z', 'settings.json.bak-loupe-2026-11-19T00-00-00-000Z']);
+  assert.deepStrictEqual(fs.readdirSync(dir).sort(), ['settings.json', 'settings.json.bak-loupe-2026-11-10T00-00-00-000Z',
+    'settings.json.bak-loupe-2026-11-18T00-00-00-000Z', 'settings.json.bak-loupe-2026-11-19T00-00-00-000Z']); // the oldest is the pre-LOUPE file
   const log = path.join(dir, 'reap.log');
   fs.writeFileSync(log, Array.from({ length: 20000 }, (_, i) => `line ${i}`).join('\n') + '\n');
   store.capLog(log, 64 << 10);

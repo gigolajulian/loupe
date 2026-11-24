@@ -13,6 +13,7 @@ function load(file, defaults) {
 
 // temp file, then rename: a crash or a full disk mid-write leaves the old file whole. false = not saved, no throw.
 function save(file, data) {
+  try { file = fs.realpathSync(file); } catch {} // a symlinked settings.json stays a link: write its target
   const tmp = `${file}.${process.pid}.tmp`;
   try {
     fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -35,10 +36,11 @@ function capLog(file, max) {
   } catch {}
 }
 
-// keep the newest `keep` files in dir whose names start with prefix (ISO-stamped names sort by time)
+// keep `keep` files in dir whose names start with prefix: the oldest (the file from before LOUPE first changed it) and
+// the newest keep-1. ISO-stamped names sort by time.
 function prune(dir, prefix, keep) {
   try {
-    const old = fs.readdirSync(dir).filter(f => f.startsWith(prefix)).sort().slice(0, -keep || undefined);
+    const old = fs.readdirSync(dir).filter(f => f.startsWith(prefix)).sort().slice(1, 1 - keep || undefined);
     for (const f of old) try { fs.unlinkSync(path.join(dir, f)); } catch {}
   } catch {}
 }

@@ -35,7 +35,8 @@ function apply(map, ev) {
   if (ev.hook_event_name === 'SessionEnd') return void map.delete(id);
   let s = map.get(id);
   if (!s) {
-    if (map.size >= MAX_SESSIONS) map.delete([...map.values()].reduce((a, b) => ((b.ts || 0) < (a.ts || 0) ? b : a)).id);
+    const free = [...map.values()].filter(x => !(x.ask && x.ask.req)); // a held prompt keeps its card
+    if (map.size >= MAX_SESSIONS && free.length) map.delete(free.reduce((a, b) => ((b.ts || 0) < (a.ts || 0) ? b : a)).id);
     map.set(id, (s = { id, state: 'idle', steps: [], step: null, detail: '', ask: null }));
   }
   // a worktree counts as its project: ...\JG WEBSITE NEW\.claude\worktrees\determined-pike -> JG WEBSITE NEW
