@@ -1,0 +1,13 @@
+diff --git a/.github/workflows/test.yml b/.github/workflows/test.yml
+index e204501..b851fd7 100644
+--- a/.github/workflows/test.yml
++++ b/.github/workflows/test.yml
+@@ -21,7 +21,7 @@ jobs:
+         with:
+           node-version: 22
+           cache: npm
+-      - run: npm ci
++      - run: npm install
+         env:
+           ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+       - run: npm audit --omit=dev --audit-level=high

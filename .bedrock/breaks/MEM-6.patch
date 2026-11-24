@@ -1,0 +1,13 @@
+diff --git a/sessions.js b/sessions.js
+index 4c4b323..7131c92 100644
+--- a/sessions.js
++++ b/sessions.js
+@@ -10,7 +10,7 @@ const RANK = { need: 0, err: 1, work: 2, think: 3, ready: 4, done: 5, idle: 6 };
+ const DONE_MS = 5000;
+ const STALE_MS = 12 * 3600e3; // Code tab sessions rarely send SessionEnd
+ const TEST_ID = 'loupe-test', TEST_MS = 10e3; // the README's install test clears itself
+-const MAX_SESSIONS = 200; // far more than anyone runs; past it the least recent goes, so the map can't grow without end
++const MAX_SESSIONS = Infinity; // far more than anyone runs; past it the least recent goes, so the map can't grow without end
+ 
+ function detail(ev) {
+   const i = ev.tool_input || {};

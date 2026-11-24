@@ -136,26 +136,30 @@ Claude sessions can leave dev servers, log tails and watchers running after you 
 - The relay fails open. If LOUPE is closed, it exits at once and Claude Code works as usual.
 - `~/.claude/settings.json` is backed up to `settings.json.bak-loupe-<time>` before LOUPE changes a hook. Other hooks stay.
 - Update checks and downloads from this repo's GitHub releases are the only network use.
+- What LOUPE keeps, all on the PC, all plain files you can open or copy: tray settings in `config.json`, `updater.log` and `loupe.log` (errors) in its app data folder (`%APPDATA%\loupe`, Mac `~/Library/Application Support/LOUPE`), each trimmed past 256 KB. Up to 3 `settings.json.bak-loupe-*` backups: the first one (your settings from before LOUPE) and the newest 2. `~/.claude/reap.log` (Processes kills, tokens masked), trimmed past 256 KB. Sessions live in memory only and drop after 12 hours idle.
 
 ## Dev
 
-- `npm install`, then `npm start` runs from source. Quit the installed app first: only one copy runs at a time.
+- `npm ci`, then `npm start` runs from source. Quit the installed app first: only one copy runs at a time.
+- `npm test` runs every test (CI runs it on Windows and macOS for each push and PR). `test/baseline.test.js` has one test per BASELINE.md check; `node scripts/checks.js <ID>` runs the repo checks (secret scan, lockfile, CI, contrast, versions).
+- `node scripts/exit-check.js` and `node scripts/measure.js` start a copy in a scratch profile (Windows) and check what it leaves after quit, and its start time, memory and CPU.
+- Agents working here: reuse a running `npm start`, and stop every copy, dev server and measuring script you started before ending the turn. Nothing stays running in a worktree.
 - `npm run icons` re-exports the icons from `logo/`.
 - `npm run dist` builds the Windows installer into `dist\`, `npm run dist:mac` the Mac zips (on a Mac).
 - `node sessions.js` and `node hooks.js` run the self-checks.
-- Dev env vars: `LOUPE_SNAP=<png>` writes what the window draws every second, `LOUPE_CLICK=<file>` runs one line per second on the page (`js:` lines run as code), `LOUPE_NOTCH=WxH` fakes a notch.
+- Dev env vars: `LOUPE_SNAP=<png>` writes what the window draws every second, `LOUPE_CLICK=<file>` runs one line per second on the page (`js:` lines run as code), `LOUPE_NOTCH=WxH` fakes a notch, `LOUPE_USERDATA=<dir>` uses a scratch profile, `LOUPE_REAP=<ps1>` swaps the Processes scan (checks only).
 
 ## Release an update
 
-1. Bump `version` in `package.json` (e.g. 0.2.12 to 0.2.13). Installs only update to a higher version.
-2. `node sessions.js && node hooks.js`.
+1. Bump `version` in `package.json` (e.g. 0.2.12 to 0.2.13), the only place the version lives. Installs only update to a higher version. Add a plain-words entry for it to `CHANGELOG.md`.
+2. `npm test`.
 3. Publish. `GH_TOKEN` comes from the environment, never typed or pasted. With the GitHub CLI logged in:
    ```bash
    GH_TOKEN="$(gh auth token)" npm run release
    ```
-   This builds, uploads the installer, its `.blockmap` and `latest.yml`, publishes the release (`releaseType: release` in package.json, not a draft), then signs the installer and uploads `LOUPE-Setup-<version>.exe.sig`. Installs refuse an update without it. If signing fails after the release is up, fix it and run `node scripts/sign-release.js --upload`; installs retry at the next check. The key is `~/.release-keys/updates-ed25519.pem` on Julian's PC (or the file `RELEASE_SIGNING_KEY` points to). It never goes in a repo. If it is lost, installed copies can't update again, so keep a backup.
+   This builds, uploads the installer, its `.blockmap` and `latest.yml`, publishes the release (`releaseType: release` in package.json, not a draft), then signs the installer and uploads `LOUPE-Setup-<version>.exe.sig`. Installs refuse an update without it. If signing fails after the release is up, fix it and run `node scripts/sign-release.js --upload`; installs retry at the next check. The key is `~/.release-keys/updates-ed25519.enc.pem` on Julian's PC, protected by a passphrase the release asks for in the terminal (or the file `RELEASE_SIGNING_KEY` points to; the plain `updates-ed25519.pem` is used only while no protected copy exists). `node scripts/protect-key.js` makes the protected copy once. It never goes in a repo. If it is lost, installed copies can't update again, so keep a backup.
 4. Commit and push the source: `git commit -am "LOUPE <version>" && git push`.
-5. Check https://github.com/gigolajulian/loupe/releases/latest lists `latest.yml`. Running installs pick it up within 4 hours, or now with tray "Check for updates", and install on quit. GitHub's release feed can lag a minute or two after publishing.
+5. Check https://github.com/gigolajulian/loupe/releases/latest lists `latest.yml`. Running installs pick it up within 4 hours, or now with tray "Check for updates", and ask before they restart to install. GitHub's release feed can lag a minute or two after publishing.
 
 Mac: on the Mac, `GH_TOKEN="$(gh auth token)" npx electron-builder --mac --publish always` adds the zips and `latest-mac.yml` to the same release. Mac installs only get a "LOUPE x is out" dialog, since unsigned apps can't update in place.
 

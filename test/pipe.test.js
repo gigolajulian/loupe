@@ -14,6 +14,7 @@ const tmpHome = () => fs.mkdtempSync(path.join(os.tmpdir(), 'loupe-home-'));
 const relay = (home, ev) => new Promise(res => {
   const p = spawn(process.execPath, [RELAY], { env: { ...process.env, USERPROFILE: home, HOME: home } });
   p.on('exit', code => res(code));
+  p.stdin.on('error', () => {}); // the relay may exit before reading (no LOUPE): EPIPE on macOS
   p.stdin.end(JSON.stringify(ev));
 });
 const EV = { session_id: 'loupe-test', hook_event_name: 'UserPromptSubmit', cwd: 'C:/LOUPE TEST' }; // clears itself in 10 s

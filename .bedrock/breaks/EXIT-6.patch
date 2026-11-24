@@ -1,0 +1,13 @@
+diff --git a/relay.js b/relay.js
+index ba6c7bb..9ec615c 100644
+--- a/relay.js
++++ b/relay.js
+@@ -37,7 +37,7 @@ process.stdin.on('end', () => {
+     sock.write(JSON.stringify(ev) + '\n');
+   });
+   sock.on('error', bail);
+-  sock.on('close', bail);
++  sock.on('close', () => setTimeout(bail, 10e3));
+   let reply = '';
+   sock.setEncoding('utf8');
+   sock.on('data', c => {

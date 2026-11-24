@@ -99,6 +99,15 @@ function Find-SessionProcs($snap) {
   }
 }
 
+# Command lines can carry tokens and keys: reap.log gets them masked (PRIV-2).
+function Hide-Secrets([string]$cmd) {
+  $v = '("[^"]*"|''[^'']*''|[^\s"]+)'
+  $c = $cmd -replace "(?i)(\s--?[\w.-]*(?:token|key|secret|password|passwd|pwd|auth)[\w.-]*(?:=|\s+))$v", '$1***'
+  $c = $c -replace "(?i)(\b[\w.-]*(?:token|key|secret|password|passwd|pwd)[\w.-]*\s*[=:]\s*)$v", '$1***'
+  $c = $c -replace '(?i)\bBearer\s+[\w.~+/=-]+', 'Bearer ***' -replace '\beyJ[\w-]+\.[\w-]+\.[\w-]*', '***'
+  $c -replace '(?i)(?<![\w-])(?:gh[pousr]_|github_pat_|sk-|xox[abprs]-|AKIA)[\w-]{8,}', '***'
+}
+
 function Stop-Leftover($snap, $row) {
   $now = Get-CimInstance Win32_Process -Filter "ProcessId=$($row.Pid)"
   if (-not $now) { return "$($row.Pid) already gone" }
@@ -108,7 +117,7 @@ function Stop-Leftover($snap, $row) {
   foreach ($t in $tree) { Stop-Process -Id $t.ProcessId -Force -ErrorAction SilentlyContinue }  # children taskkill missed (already detached)
   $alive = Get-Process -Id $row.Pid -ErrorAction SilentlyContinue
   if ($alive -and $alive.WaitForExit(3000)) { $alive = $null }  # taskkill returns before the process has fully exited
-  $line = '{0:s} {1} pid={2} kids={3} mem={4}MB {5}' -f (Get-Date), ($(if ($alive) { 'kill-failed' } else { 'killed' })), $row.Pid, $tree.Count, $row.MemMB, $row.Cmd
+  $line = '{0:s} {1} pid={2} kids={3} mem={4}MB {5}' -f (Get-Date), ($(if ($alive) { 'kill-failed' } else { 'killed' })), $row.Pid, $tree.Count, $row.MemMB, (Hide-Secrets $row.Cmd)
   Add-Content -Path $log -Value $line -Encoding utf8
   if ($alive) { "$($row.Pid) FAILED to stop" } else { "$($row.Pid) killed ($($tree.Count) children, $($row.MemMB) MB)" }
 }
@@ -116,7 +125,7 @@ function Stop-Leftover($snap, $row) {
 if ($SelfTest) {
   $tag = "reap-selftest-$PID"
   # cmd starts a sleeper and exits at once, so the sleeper's parent is gone: a real orphan.
-  Start-Process cmd.exe -ArgumentList "/c start /b powershell.exe -NoProfile -Command `"Start-Sleep 120 # $tag Documents\Claude\Projects`"" -WindowStyle Hidden
+  Start-Process cmd.exe -ArgumentList "/c start /b powershell.exe -NoProfile -Command `"Start-Sleep 120 # $tag Documents\Claude\Projects --api-token=$tag-secret`"" -WindowStyle Hidden
   Start-Sleep 3
   $snap = Get-Snapshot
   $row = @(Find-Leftovers $snap) | Where-Object { $_.Cmd -like "*$tag*" }

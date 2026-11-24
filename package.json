@@ -22,6 +22,8 @@
       "main.js",
       "update-signature.js",
       "pipe.js",
+      "store.js",
+      "ipc.js",
       "preload.js",
       "renderer.js",
       "sessions.js",
@@ -93,5 +95,8 @@
     "electron@45.4.1": true,
     "electron-winstaller@5.4.0": true,
     "koffi@3.3.3": true
+  },
+  "overrides": {
+    "minimatch@>=7.0.0 <11.0.1": "^11.0.9"
   }
 }

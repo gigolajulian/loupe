@@ -1,0 +1,13 @@
+diff --git a/store.js b/store.js
+index 6e130f4..cb82b06 100644
+--- a/store.js
++++ b/store.js
+@@ -7,7 +7,7 @@ const path = require('path');
+ function load(file, defaults) {
+   try {
+     const v = JSON.parse(fs.readFileSync(file, 'utf8'));
+-    return { ...defaults, ...(v && typeof v === 'object' && !Array.isArray(v) ? v : {}) };
++    return v;
+   } catch { return { ...defaults }; }
+ }
+ 

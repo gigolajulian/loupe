@@ -1,0 +1,13 @@
+diff --git a/store.js b/store.js
+index 6e130f4..2fade55 100644
+--- a/store.js
++++ b/store.js
+@@ -17,7 +17,7 @@ function save(file, data) {
+   const tmp = `${file}.${process.pid}.tmp`;
+   try {
+     fs.mkdirSync(path.dirname(file), { recursive: true });
+-    fs.writeFileSync(tmp, typeof data === 'string' ? data : JSON.stringify(data));
++    fs.writeFileSync(file, typeof data === 'string' ? data : JSON.stringify(data));
+     fs.renameSync(tmp, file);
+     return true;
+   } catch (e) {

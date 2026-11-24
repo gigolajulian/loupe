@@ -1,0 +1,13 @@
+diff --git a/update-signature.js b/update-signature.js
+index 00fa134..f11e8d6 100644
+--- a/update-signature.js
++++ b/update-signature.js
+@@ -33,7 +33,7 @@ function guard(updater, { app, sigUrl, log = console.error, key, timeoutMs = 30e
+     try {
+       if (info) {
+         const sha = await sha256(file);
+-        const r = await fetch(sigUrl(info.version), { signal: AbortSignal.timeout(timeoutMs) });
++        const r = await fetch(sigUrl(info.version));
+         why = !r.ok ? `no signature (${r.status})` : signed(app, info.version, sha, await r.text(), key) ? '' : 'signature does not match';
+       }
+     } catch (e) { why = e.message; }

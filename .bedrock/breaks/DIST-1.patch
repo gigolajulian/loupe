@@ -1,0 +1,13 @@
+diff --git a/package.json b/package.json
+index 65c2abe..406b4b1 100644
+--- a/package.json
++++ b/package.json
+@@ -73,7 +73,7 @@
+       "oneClick": true,
+       "perMachine": false,
+       "runAfterFinish": true,
+-      "shortcutName": "LOUPE"
++      "shortcutName": "electron"
+     },
+     "publish": {
+       "provider": "github",

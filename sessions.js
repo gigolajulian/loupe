@@ -10,6 +10,7 @@ const RANK = { need: 0, err: 1, work: 2, think: 3, ready: 4, done: 5, idle: 6 };
 const DONE_MS = 5000;
 const STALE_MS = 12 * 3600e3; // Code tab sessions rarely send SessionEnd
 const TEST_ID = 'loupe-test', TEST_MS = 10e3; // the README's install test clears itself
+const MAX_SESSIONS = 200; // far more than anyone runs; past it the least recent goes, so the map can't grow without end
 
 function detail(ev) {
   const i = ev.tool_input || {};
@@ -33,7 +34,11 @@ function apply(map, ev) {
   if (!id) return;
   if (ev.hook_event_name === 'SessionEnd') return void map.delete(id);
   let s = map.get(id);
-  if (!s) map.set(id, (s = { id, state: 'idle', steps: [], step: null, detail: '', ask: null }));
+  if (!s) {
+    const free = [...map.values()].filter(x => !(x.ask && x.ask.req)); // a held prompt keeps its card
+    if (map.size >= MAX_SESSIONS && free.length) map.delete(free.reduce((a, b) => ((b.ts || 0) < (a.ts || 0) ? b : a)).id);
+    map.set(id, (s = { id, state: 'idle', steps: [], step: null, detail: '', ask: null }));
+  }
   // a worktree counts as its project: ...\JG WEBSITE NEW\.claude\worktrees\determined-pike -> JG WEBSITE NEW
   const [root, wt] = (ev.cwd || '').split(/[\\/]\.claude[\\/]worktrees[\\/]/);
   s.name = base(root) || s.name || 'session';
@@ -86,17 +91,18 @@ function settle(map, req) {
   }
 }
 
-// hook output for an answer from the island. null = no decision, Claude Code asks in the app.
+// hook output for an answer from the island. null = no decision, Claude Code asks in the app. Fails closed: only an
+// explicit Allow or Always allows; anything else (a bug, a stray value) goes back to the thread (SEC-5).
 function reply(ev, choice) {
-  if (choice === 'app') return null;
   if (ev.hook_event_name === 'PermissionRequest') {
     const decision =
       choice === 'deny' ? { behavior: 'deny', message: 'Denied from LOUPE' } :
       choice === 'always' && ev.permission_suggestions ? { behavior: 'allow', updatedPermissions: ev.permission_suggestions } :
-      { behavior: 'allow' };
-    return { hookSpecificOutput: { hookEventName: 'PermissionRequest', decision } };
+      choice === 'allow' || choice === 'always' ? { behavior: 'allow' } : null;
+    return decision && { hookSpecificOutput: { hookEventName: 'PermissionRequest', decision } };
   }
   // AskUserQuestion: choice = { "question text": "label" or "a, b" }
+  if (!choice || typeof choice !== 'object' || Array.isArray(choice) || !Object.values(choice).every(v => typeof v === 'string')) return null;
   return {
     hookSpecificOutput: {
       hookEventName: 'PreToolUse',
@@ -115,7 +121,24 @@ function view(map, now = Date.now()) {
   return [...map.values()].sort((a, b) => RANK[a.state] - RANK[b.state] || b.ts - a.ts);
 }
 
-module.exports = { apply, view, settle, reply };
+// the newest agent-name title in a transcript of `size` bytes, read through read(pos, len). Transcripts reach hundreds
+// of MB: the first look reads backwards in 1 MB steps, 8 MB at most; later looks read only what was appended after
+// `from` (newest 8 MB of it). null = no title in what was read.
+const TITLE_RE = /"type":"agent-name","agentName":"((?:[^"\\]|\\.)*)"/g, MB = 1 << 20, FIRST_MAX = 8 * MB;
+function lastTitle(read, size, from = -1) {
+  let found = null;
+  if (from >= 0) { // appended part only, with a little overlap for a line cut at the old end
+    const at = Math.max(0, from - 4096, size - FIRST_MAX);
+    if (size > at) found = [...read(at, Math.min(size - at, FIRST_MAX)).matchAll(TITLE_RE)].pop();
+  } else for (let end = size; end > 0 && size - end < FIRST_MAX && !found; end -= MB - 4096) {
+    const at = Math.max(0, end - MB);
+    found = [...read(at, end - at).matchAll(TITLE_RE)].pop();
+    if (!at) break;
+  }
+  return found ? JSON.parse(`"${found[1]}"`) : null;
+}
+
+module.exports = { apply, view, settle, reply, lastTitle };
 
 if (require.main === module) {
   const assert = require('assert');

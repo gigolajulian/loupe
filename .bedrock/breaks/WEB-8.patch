@@ -1,0 +1,13 @@
+diff --git a/main.js b/main.js
+index cc461d9..eeded5d 100644
+--- a/main.js
++++ b/main.js
+@@ -213,7 +213,7 @@ function hookCheck(autoFix, onlyIfBad) {
+   let node = '';
+   try { // Mac: a Finder-launched app has a bare PATH, a login shell sees what the hooks see
+     node = (MAC ? require('child_process').execFileSync('/bin/zsh', ['-lc', 'node -v'], { encoding: 'utf8', timeout: 5000 })
+-      : require('child_process').execFileSync('node', ['-v'], { encoding: 'utf8', timeout: 5000, windowsHide: true })).trim();
++      : require('child_process').execSync('node -v', { encoding: 'utf8', timeout: 5000, windowsHide: true })).trim();
+   } catch {}
+   const r = hooks.check(settings, RELAY);
+   const ago = lastEvent ? `${Math.round((Date.now() - lastEvent) / 1000)} s ago` : 'none since LOUPE started';

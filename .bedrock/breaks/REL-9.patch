@@ -1,0 +1,13 @@
+diff --git a/main.js b/main.js
+index cc461d9..bb311be 100644
+--- a/main.js
++++ b/main.js
+@@ -496,7 +496,7 @@ app.whenReady().then(() => {
+     } }] : []),
+     { label: 'Check Claude Code hooks', click: () => hookCheck() },
+     ready ? { label: `Restart to update to ${ready}`, click: () => install() }
+-      : { label: `Check for updates (${app.getVersion()})`, enabled: app.isPackaged, click: () => checkUpdates(true) },
++      : { label: `Check for updates (${'0.3.2'})`, enabled: app.isPackaged, click: () => checkUpdates(true) },
+     { label: 'Quit LOUPE', click: () => app.quit() },
+   ]));
+   // updates: GitHub releases (package.json build.publish). Windows downloads in the background, then asks before it

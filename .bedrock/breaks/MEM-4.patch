@@ -1,0 +1,13 @@
+diff --git a/sessions.js b/sessions.js
+index 4c4b323..695f208 100644
+--- a/sessions.js
++++ b/sessions.js
+@@ -124,7 +124,7 @@ function view(map, now = Date.now()) {
+ // the newest agent-name title in a transcript of `size` bytes, read through read(pos, len). Transcripts reach hundreds
+ // of MB: the first look reads backwards in 1 MB steps, 8 MB at most; later looks read only what was appended after
+ // `from` (newest 8 MB of it). null = no title in what was read.
+-const TITLE_RE = /"type":"agent-name","agentName":"((?:[^"\\]|\\.)*)"/g, MB = 1 << 20, FIRST_MAX = 8 * MB;
++const TITLE_RE = /"type":"agent-name","agentName":"((?:[^"\\]|\\.)*)"/g, MB = 1 << 20, FIRST_MAX = Infinity;
+ function lastTitle(read, size, from = -1) {
+   let found = null;
+   if (from >= 0) { // appended part only, with a little overlap for a line cut at the old end

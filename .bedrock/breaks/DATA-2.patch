@@ -1,0 +1,13 @@
+diff --git a/store.js b/store.js
+index 6e130f4..4f9672c 100644
+--- a/store.js
++++ b/store.js
+@@ -50,7 +50,7 @@ function logger(file, max = 256 << 10) {
+   return (what, e) => {
+     try {
+       capLog(file, max);
+-      fs.appendFileSync(file, `${new Date().toISOString()} ${what} ${(e && (e.stack || e.message)) || e || ''}\n`);
++      fs.appendFileSync(file, `${new Date().toISOString()} ${what} \n`);
+     } catch {}
+   };
+ }

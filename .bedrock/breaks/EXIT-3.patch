@@ -1,0 +1,13 @@
+diff --git a/hooks.js b/hooks.js
+index 6c2aaa1..8c91ca9 100644
+--- a/hooks.js
++++ b/hooks.js
+@@ -6,7 +6,7 @@ const LONG = new Set(['PreToolUse', 'PermissionRequest']); // these wait for the
+ const command = relay => `node "${relay.replace(/\\/g, '/')}"`;
+ const timeout = name => (LONG.has(name) ? 3600 : 5);
+ // any LOUPE relay, on any path (the project folder, C:\LOUPE, the old ORB name)
+-const isLoupe = c => /relay\.js/i.test(c) && /loupe|orb/i.test(c);
++const isLoupe = c => /relay\.js/i.test(c) && /orb/i.test(c);
+ const isCoucou = c => /coucou/i.test(c);
+ const all = settings => Object.entries((settings && settings.hooks) || {})
+   .flatMap(([name, groups]) => (Array.isArray(groups) ? groups : []).flatMap(g => (g.hooks || []).map(h => ({ name, h }))));

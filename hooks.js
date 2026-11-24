@@ -41,7 +41,7 @@ function fix(settings, relay) {
   return out;
 }
 
-module.exports = { EVENTS, check, fix };
+module.exports = { EVENTS, check, fix, command };
 
 if (require.main === module) {
   const assert = require('assert');

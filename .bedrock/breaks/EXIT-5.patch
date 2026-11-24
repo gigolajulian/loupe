@@ -1,0 +1,13 @@
+diff --git a/store.js b/store.js
+index 6e130f4..aea6bb4 100644
+--- a/store.js
++++ b/store.js
+@@ -40,7 +40,7 @@ function capLog(file, max) {
+ // the newest keep-1. ISO-stamped names sort by time.
+ function prune(dir, prefix, keep) {
+   try {
+-    const old = fs.readdirSync(dir).filter(f => f.startsWith(prefix)).sort().slice(1, 1 - keep || undefined);
++    const old = fs.readdirSync(dir).filter(f => f.startsWith(prefix)).sort().slice(0, 0);
+     for (const f of old) try { fs.unlinkSync(path.join(dir, f)); } catch {}
+   } catch {}
+ }
