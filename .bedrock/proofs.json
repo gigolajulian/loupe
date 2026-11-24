@@ -425,15 +425,15 @@
     "result": "proven",
     "command": "node --test --test-name-pattern=WEB-1: test/baseline.test.js",
     "break": ".bedrock/breaks/WEB-1.patch",
-    "patch_sha256": "4a89116185862eb1b3ad0b47e3e05f92e0424f2cf8d83a9102a15eb40d40bcc6",
-    "sha": "689dd5be13d811698d8cd0b5b724a496311900a9",
+    "patch_sha256": "abe013b7401a43fae6356cabd4fc36922c716aaabe1caf2f96c5cd4609b49459",
+    "sha": "2ca32c1ca6663622d4c9f7f1c5b16201ace931df",
     "files": {
-      "index.html": "2c9d68cdc04051c4646b40bdcc61c1c144c3bb24b0c323faa3e8c52c47b53f00",
+      "index.html": "1b7e885c9e38fb59473669853cbb90bfeb130ae666b920cbf292c5e32404702a",
       "test/baseline.test.js": "d2091dccbef5269a1873c96b7d9e0b1228f5dd0f7a79facdb190aed4af0797f6",
       "test/pipe.test.js": "4ff8f48d077205f82200ddc60f76b6d38394e7e5e40941813d95383871f1927a",
       "test/update-signature.test.js": "9cd1715bf33e82dfc2000f65a1ae5bfe15c9c33cfadd75c59925fa9c9d7c99eb"
     },
-    "seconds": 3.7,
+    "seconds": 6.1,
     "date": "2026-11-24",
     "bedrock": "2.9.5"
   },
@@ -441,16 +441,16 @@
     "result": "proven",
     "command": "node scripts/checks.js PRIV-1",
     "break": ".bedrock/breaks/PRIV-1.patch",
-    "patch_sha256": "5eabb4aa96eba3229b9e9023b9b6d02b8dbf0fec11a8bcd43db123ad67dc8ac0",
-    "sha": "689dd5be13d811698d8cd0b5b724a496311900a9",
+    "patch_sha256": "6a4c6af67538633a2e73d731fdaca0b85fa5c6cb6e3ee6e33aeb4b21aee91f6f",
+    "sha": "2ca32c1ca6663622d4c9f7f1c5b16201ace931df",
     "files": {
-      "index.html": "2c9d68cdc04051c4646b40bdcc61c1c144c3bb24b0c323faa3e8c52c47b53f00",
+      "index.html": "1b7e885c9e38fb59473669853cbb90bfeb130ae666b920cbf292c5e32404702a",
       "scripts/checks.js": "0634616d1ed7fd292289465402ffd286c2447fe1714026dee61426a298d62b59",
       "test/baseline.test.js": "d2091dccbef5269a1873c96b7d9e0b1228f5dd0f7a79facdb190aed4af0797f6",
       "test/pipe.test.js": "4ff8f48d077205f82200ddc60f76b6d38394e7e5e40941813d95383871f1927a",
       "test/update-signature.test.js": "9cd1715bf33e82dfc2000f65a1ae5bfe15c9c33cfadd75c59925fa9c9d7c99eb"
     },
-    "seconds": 3.4,
+    "seconds": 3.8,
     "date": "2026-11-24",
     "bedrock": "2.9.5"
   },
@@ -458,15 +458,15 @@
     "result": "proven",
     "command": "node --test --test-name-pattern=A11Y-2: test/baseline.test.js",
     "break": ".bedrock/breaks/A11Y-2.patch",
-    "patch_sha256": "43d69d6e7bce8fd8691a0015ed6848d23b52e6fcf37c4c44b91956083e96ca8b",
-    "sha": "689dd5be13d811698d8cd0b5b724a496311900a9",
+    "patch_sha256": "cd7c295b4164f116cccfb92154ec69fc8f9aa58b5451ead2141705c27715bf1e",
+    "sha": "2ca32c1ca6663622d4c9f7f1c5b16201ace931df",
     "files": {
-      "index.html": "2c9d68cdc04051c4646b40bdcc61c1c144c3bb24b0c323faa3e8c52c47b53f00",
+      "index.html": "1b7e885c9e38fb59473669853cbb90bfeb130ae666b920cbf292c5e32404702a",
       "test/baseline.test.js": "d2091dccbef5269a1873c96b7d9e0b1228f5dd0f7a79facdb190aed4af0797f6",
       "test/pipe.test.js": "4ff8f48d077205f82200ddc60f76b6d38394e7e5e40941813d95383871f1927a",
       "test/update-signature.test.js": "9cd1715bf33e82dfc2000f65a1ae5bfe15c9c33cfadd75c59925fa9c9d7c99eb"
     },
-    "seconds": 3.8,
+    "seconds": 4.4,
     "date": "2026-11-24",
     "bedrock": "2.9.5"
   },
@@ -517,6 +517,23 @@
       "test/update-signature.test.js": "9cd1715bf33e82dfc2000f65a1ae5bfe15c9c33cfadd75c59925fa9c9d7c99eb"
     },
     "seconds": 3.3,
+    "date": "2026-11-24",
+    "bedrock": "2.9.5"
+  },
+  "UX-2@desktop, web": {
+    "result": "proven",
+    "command": "node scripts/checks.js UX-2",
+    "break": ".bedrock/breaks/UX-2.patch",
+    "patch_sha256": "42ac17d53fe6b8d40e72d95bffe9ff5604052457854e1ea375d626cb781f7ed0",
+    "sha": "2ca32c1ca6663622d4c9f7f1c5b16201ace931df",
+    "files": {
+      "index.html": "1b7e885c9e38fb59473669853cbb90bfeb130ae666b920cbf292c5e32404702a",
+      "scripts/checks.js": "0634616d1ed7fd292289465402ffd286c2447fe1714026dee61426a298d62b59",
+      "test/baseline.test.js": "d2091dccbef5269a1873c96b7d9e0b1228f5dd0f7a79facdb190aed4af0797f6",
+      "test/pipe.test.js": "4ff8f48d077205f82200ddc60f76b6d38394e7e5e40941813d95383871f1927a",
+      "test/update-signature.test.js": "9cd1715bf33e82dfc2000f65a1ae5bfe15c9c33cfadd75c59925fa9c9d7c99eb"
+    },
+    "seconds": 4.6,
     "date": "2026-11-24",
     "bedrock": "2.9.5"
   }
