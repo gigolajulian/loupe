@@ -1,0 +1,14 @@
+diff --git a/.github/workflows/test.yml b/.github/workflows/test.yml
+index e204501..a11f912 100644
+--- a/.github/workflows/test.yml
++++ b/.github/workflows/test.yml
+@@ -3,8 +3,7 @@ on:
+   push:
+     branches: [main]
+   pull_request:
+-permissions:
+-  contents: read
++permissions: write-all
+ jobs:
+   test:
+     strategy:

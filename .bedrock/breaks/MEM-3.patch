@@ -1,0 +1,12 @@
+diff --git a/pipe.js b/pipe.js
+index 52290b0..fd0a50f 100644
+--- a/pipe.js
++++ b/pipe.js
+@@ -24,7 +24,6 @@ function lines(sock, onLine, max = MAX_LINE) {
+     buf += c;
+     let i;
+     while ((i = buf.indexOf('\n')) >= 0) { const l = buf.slice(0, i); buf = buf.slice(i + 1); onLine(l); }
+-    if (buf.length > max) { buf = ''; sock.destroy(); }
+   });
+ }
+ 

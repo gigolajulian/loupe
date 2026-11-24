@@ -1,0 +1,13 @@
+diff --git a/reap/reap.ps1 b/reap/reap.ps1
+index 0e0c632..9b8941a 100644
+--- a/reap/reap.ps1
++++ b/reap/reap.ps1
+@@ -114,7 +114,7 @@ function Stop-Leftover($snap, $row) {
+   foreach ($t in $tree) { Stop-Process -Id $t.ProcessId -Force -ErrorAction SilentlyContinue }  # children taskkill missed (already detached)
+   $alive = Get-Process -Id $row.Pid -ErrorAction SilentlyContinue
+   if ($alive -and $alive.WaitForExit(3000)) { $alive = $null }  # taskkill returns before the process has fully exited
+-  $line = '{0:s} {1} pid={2} kids={3} mem={4}MB {5}' -f (Get-Date), ($(if ($alive) { 'kill-failed' } else { 'killed' })), $row.Pid, $tree.Count, $row.MemMB, (Hide-Secrets $row.Cmd)
++  $line = '{0:s} {1} pid={2} kids={3} mem={4}MB {5}' -f (Get-Date), ($(if ($alive) { 'kill-failed' } else { 'killed' })), $row.Pid, $tree.Count, $row.MemMB, $row.Cmd
+   Add-Content -Path $log -Value $line -Encoding utf8
+   if ($alive) { "$($row.Pid) FAILED to stop" } else { "$($row.Pid) killed ($($tree.Count) children, $($row.MemMB) MB)" }
+ }

@@ -1,0 +1,13 @@
+diff --git a/ipc.js b/ipc.js
+index 25e28b0..7e6c950 100644
+--- a/ipc.js
++++ b/ipc.js
+@@ -2,7 +2,7 @@
+ // injected script can't turn on answering prompts or kill a process that isn't a listed "pid@start".
+ const PAGE_KEYS = new Set(['sound', 'volume', 'procs', 'procsAsked']);
+ 
+-const cfgPatch = p => Object.fromEntries(Object.entries(p && typeof p === 'object' ? p : {}).filter(([k]) => PAGE_KEYS.has(k)));
++const cfgPatch = p => Object.fromEntries(Object.entries(p && typeof p === 'object' ? p : {}));
+ const killList = pids => (Array.isArray(pids) ? pids : []).map(String).filter(p => /^\d{3,7}(@\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)?$/.test(p));
+ 
+ module.exports = { cfgPatch, killList };

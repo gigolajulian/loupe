@@ -1,0 +1,14 @@
+diff --git a/.github/dependabot.yml b/.github/dependabot.yml
+index 782a0ad..5ace460 100644
+--- a/.github/dependabot.yml
++++ b/.github/dependabot.yml
+@@ -1,9 +1,5 @@
+ version: 2
+ updates:
+-  - package-ecosystem: "npm"
+-    directory: "/"
+-    schedule:
+-      interval: "weekly"
+   - package-ecosystem: "github-actions"
+     directory: "/"
+     schedule:

@@ -1,0 +1,13 @@
+diff --git a/hooks.js b/hooks.js
+index 6c2aaa1..16ea8bd 100644
+--- a/hooks.js
++++ b/hooks.js
+@@ -3,7 +3,7 @@ const EVENTS = ['SessionStart', 'SessionEnd', 'UserPromptSubmit', 'PreToolUse',
+   'PostToolUse', 'PostToolUseFailure', 'Notification', 'Stop', 'StopFailure'];
+ const LONG = new Set(['PreToolUse', 'PermissionRequest']); // these wait for the island when "Answer prompts on LOUPE" is on
+ 
+-const command = relay => `node "${relay.replace(/\\/g, '/')}"`;
++const command = relay => `node ${relay.replace(/\\/g, '/')}`;
+ const timeout = name => (LONG.has(name) ? 3600 : 5);
+ // any LOUPE relay, on any path (the project folder, C:\LOUPE, the old ORB name)
+ const isLoupe = c => /relay\.js/i.test(c) && /loupe|orb/i.test(c);

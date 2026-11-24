@@ -1,0 +1,16 @@
+diff --git a/store.js b/store.js
+index 1dd81b2..3f14c9a 100644
+--- a/store.js
++++ b/store.js
+@@ -19,10 +19,7 @@ function save(file, data) {
+     fs.writeFileSync(tmp, typeof data === 'string' ? data : JSON.stringify(data));
+     fs.renameSync(tmp, file);
+     return true;
+-  } catch (e) {
+-    try { fs.unlinkSync(tmp); } catch {}
+-    return false;
+-  }
++  } finally {}
+ }
+ 
+ // a log past max bytes keeps its newest half (whole lines)

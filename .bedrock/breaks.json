@@ -1,4 +1,171 @@
 {
-  "LOC-1": {"file": "pipe.js", "find": "crypto.randomBytes(16).toString('hex')", "replace": "require('os').userInfo().username"},
-  "REL-1": {"file": "update-signature.js", "find": "    if (!why) return null;", "replace": "    return null;"}
+ "LOC-1": {
+  "file": "pipe.js",
+  "find": "crypto.randomBytes(16).toString('hex')",
+  "replace": "require('os').userInfo().username"
+ },
+ "REL-1": {
+  "file": "update-signature.js",
+  "find": "    if (!why) return null;",
+  "replace": "    return null;"
+ },
+ "SEC-5": {
+  "file": "sessions.js",
+  "find": "choice === 'allow' || choice === 'always' ? { behavior: 'allow' } : null;",
+  "replace": "{ behavior: 'allow' };"
+ },
+ "INP-1": {
+  "file": "store.js",
+  "find": "  } catch (e) {\n    try { fs.unlinkSync(tmp); } catch {}\n    return false;\n  }",
+  "replace": "  } finally {}"
+ },
+ "INP-2": {
+  "file": "store.js",
+  "find": "    fs.writeFileSync(tmp, typeof data",
+  "replace": "    fs.writeFileSync(file, typeof data"
+ },
+ "OPS-8": {
+  "file": "store.js",
+  "find": "    fs.renameSync(tmp, file);\n",
+  "replace": ""
+ },
+ "DATA-3": {
+  "file": "store.js",
+  "find": "    return { ...defaults, ...(v && typeof v === 'object' && !Array.isArray(v) ? v : {}) };",
+  "replace": "    return v;"
+ },
+ "MEM-3": {
+  "file": "pipe.js",
+  "find": "    if (buf.length > max) { buf = ''; sock.destroy(); }\n",
+  "replace": ""
+ },
+ "MEM-4": {
+  "file": "sessions.js",
+  "find": "FIRST_MAX = 8 * MB;",
+  "replace": "FIRST_MAX = Infinity;"
+ },
+ "MEM-6": {
+  "file": "sessions.js",
+  "find": "const MAX_SESSIONS = 200;",
+  "replace": "const MAX_SESSIONS = Infinity;"
+ },
+ "EXIT-3": {
+  "file": "hooks.js",
+  "find": "/loupe|orb/i.test(c)",
+  "replace": "/orb/i.test(c)"
+ },
+ "EXIT-5": {
+  "file": "store.js",
+  "find": ".sort().slice(0, -keep || undefined);",
+  "replace": ".sort().slice(0, 0);"
+ },
+ "EXIT-6": {
+  "file": "relay.js",
+  "find": "sock.on('error', bail);",
+  "replace": "sock.on('error', () => setTimeout(bail, 10e3));"
+ },
+ "DATA-2": {
+  "file": "store.js",
+  "find": "${(e && (e.stack || e.message)) || e || ''}",
+  "replace": ""
+ },
+ "REL-2": {
+  "file": "main.js",
+  "find": "autoUpdater.autoInstallOnAppQuit = false;",
+  "replace": "autoUpdater.autoInstallOnAppQuit = true;"
+ },
+ "NET-1": {
+  "file": "update-signature.js",
+  "find": ", { signal: AbortSignal.timeout(timeoutMs) }",
+  "replace": ""
+ },
+ "PLAT-1": {
+  "edits": [
+   {
+    "file": "hooks.js",
+    "find": "const command = relay => `node \"",
+    "replace": "const command = relay => `node "
+   },
+   {
+    "file": "hooks.js",
+    "find": "'/')}\"`;",
+    "replace": "'/')}`;"
+   }
+  ]
+ },
+ "ABU-13": {
+  "file": "ipc.js",
+  "find": ".filter(([k]) => PAGE_KEYS.has(k))",
+  "replace": ""
+ },
+ "WEB-1": {
+  "file": "index.html",
+  "find": "content=\"default-src 'self'; style-src",
+  "replace": "content=\"default-src 'self' 'unsafe-eval'; style-src"
+ },
+ "WEB-7": {
+  "file": "renderer.js",
+  "find": "PID ${r.Pid} \u00b7 ${esc(r.Cmd)}",
+  "replace": "PID ${r.Pid} \u00b7 ${r.Cmd}"
+ },
+ "A11Y-2": {
+  "file": "index.html",
+  "find": "  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: 0s !important; animation-duration: 0s !important; } }\n",
+  "replace": ""
+ },
+ "PRIV-2": {
+  "file": "reap/reap.ps1",
+  "find": "$row.MemMB, (Hide-Secrets $row.Cmd)",
+  "replace": "$row.MemMB, $row.Cmd"
+ },
+ "SEC-1": {
+  "file": "scripts/sign-release.js",
+  "find": "// Signs the Windows installer",
+  "replace": "const KEY = '-----BEGIN PRIVATE KEY-----MC4CAQAwBQYDK2VwBCIEIPlaceholderBreakKeyNotReal000000000000';\n// Signs the Windows installer"
+ },
+ "SEC-3": {
+  "file": ".github/workflows/test.yml",
+  "find": "      - run: npm ci\n",
+  "replace": "      - run: npm install\n"
+ },
+ "SEC-4": {
+  "file": ".github/dependabot.yml",
+  "find": "  - package-ecosystem: \"npm\"\n    directory: \"/\"\n    schedule:\n      interval: \"weekly\"\n",
+  "replace": ""
+ },
+ "SEC-10": {
+  "file": "pipe.js",
+  "find": "crypto.randomBytes(16).toString('hex')",
+  "replace": "crypto.randomBytes(16) && Math.random().toString(16).slice(2)"
+ },
+ "WEB-8": {
+  "file": "main.js",
+  "find": "require('child_process').execFileSync('node', ['-v'], { encoding: 'utf8', timeout: 5000, windowsHide: true })",
+  "replace": "require('child_process').execSync('node -v', { encoding: 'utf8', timeout: 5000, windowsHide: true })"
+ },
+ "PRIV-1": {
+  "file": "index.html",
+  "find": "</head>",
+  "replace": "<script async src=\"https://www.googletagmanager.com/gtag/js?id=G-X\"></script>\n</head>"
+ },
+ "DIST-1": {
+  "file": "package.json",
+  "find": "      \"shortcutName\": \"LOUPE\"",
+  "replace": "      \"shortcutName\": \"electron\""
+ },
+ "REL-9": {
+  "file": "main.js",
+  "find": "`Check for updates (${app.getVersion()})`",
+  "replace": "`Check for updates (${'0.3.2'})`"
+ },
+ "REL-7": {
+  "file": ".github/workflows/test.yml",
+  "find": "permissions:\n  contents: read\n",
+  "replace": "permissions: write-all\n"
+ },
+ "REL-10": {
+  "file": ".github/workflows/test.yml",
+  "find": "os: [windows-latest, macos-latest]",
+  "replace": "os: [windows-latest]"
+ }
 }
