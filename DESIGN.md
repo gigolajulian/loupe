@@ -32,6 +32,7 @@ CSS custom properties that match the direction. Mocks and the app both use these
 
 ## Standing checks
 One line each, checked on every mock and build:
+- Keyboard and screen readers reach every prompt through the Claude thread, not the island (accepted risk until 2027-11-23, BASELINE A11Y-1 to 7). A change that makes the island take focus revisits it.
 - Tap targets at least 44 px; text contrast at least 4.5:1 on an open tile over a white desktop (`node scripts/checks.js UX-2`).
 - No em dashes in any copy.
 - Check Windows and the Mac notch.
