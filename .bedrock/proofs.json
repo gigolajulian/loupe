@@ -130,18 +130,18 @@
     "bedrock": "2.9.5"
   },
   "EXIT-6@desktop, local": {
-    "result": "blind",
+    "result": "proven",
     "command": "node --test --test-name-pattern=EXIT-6: test/baseline.test.js",
     "break": ".bedrock/breaks/EXIT-6.patch",
-    "patch_sha256": "e2166f5dc3f317edb7638eaa47f014bbaf304e6f2facbdf4f9624c9c567053de",
-    "sha": "d08aa539feba16c7cc49f56d0e82b35eb04082cb",
+    "patch_sha256": "fa5b868b5f2bb4c82b16a52273a80a7ec68c34138c037b720ea3a3a93a24b164",
+    "sha": "8293c28d8cb495cf72348c7d37a504dd87a5d721",
     "files": {
       "relay.js": "87a75047949bb17a186f4cc3c3e514bd2f998574f1dfa4853991c46a6a9a3d79",
-      "test/baseline.test.js": "eb520d523f96aa505850e53947f42dbb1e818bcf28369bf227bf6c6dc539a063",
+      "test/baseline.test.js": "a1c8f193db338af7d47e8f08ef4d4f940b8b2dec9eadb5e80eb554e8c805de8f",
       "test/pipe.test.js": "4ff8f48d077205f82200ddc60f76b6d38394e7e5e40941813d95383871f1927a",
       "test/update-signature.test.js": "9cd1715bf33e82dfc2000f65a1ae5bfe15c9c33cfadd75c59925fa9c9d7c99eb"
     },
-    "seconds": 2.0,
+    "seconds": 16.0,
     "date": "2026-11-24",
     "bedrock": "2.9.5"
   },
@@ -308,18 +308,18 @@
     "bedrock": "2.9.5"
   },
   "REL-2@desktop": {
-    "result": "crashed",
+    "result": "proven",
     "command": "node --test --test-name-pattern=REL-2: test/baseline.test.js",
     "break": ".bedrock/breaks/REL-2.patch",
     "patch_sha256": "b0ae3e95c4ce18528de67e9b7345ce5d127ee2e46dae78cf41876778cd714b22",
-    "sha": "d08aa539feba16c7cc49f56d0e82b35eb04082cb",
+    "sha": "8293c28d8cb495cf72348c7d37a504dd87a5d721",
     "files": {
       "main.js": "05a643442f7ece1171a1c00e280d0c6966d1d9e25620b2eae86e6fc58b595126",
-      "test/baseline.test.js": "eb520d523f96aa505850e53947f42dbb1e818bcf28369bf227bf6c6dc539a063",
+      "test/baseline.test.js": "a1c8f193db338af7d47e8f08ef4d4f940b8b2dec9eadb5e80eb554e8c805de8f",
       "test/pipe.test.js": "4ff8f48d077205f82200ddc60f76b6d38394e7e5e40941813d95383871f1927a",
       "test/update-signature.test.js": "9cd1715bf33e82dfc2000f65a1ae5bfe15c9c33cfadd75c59925fa9c9d7c99eb"
     },
-    "seconds": 2.1,
+    "seconds": 5.8,
     "date": "2026-11-24",
     "bedrock": "2.9.5"
   },
@@ -455,18 +455,18 @@
     "bedrock": "2.9.5"
   },
   "A11Y-2@desktop, web": {
-    "result": "crashed",
+    "result": "proven",
     "command": "node --test --test-name-pattern=A11Y-2: test/baseline.test.js",
     "break": ".bedrock/breaks/A11Y-2.patch",
     "patch_sha256": "43d69d6e7bce8fd8691a0015ed6848d23b52e6fcf37c4c44b91956083e96ca8b",
-    "sha": "d08aa539feba16c7cc49f56d0e82b35eb04082cb",
+    "sha": "8293c28d8cb495cf72348c7d37a504dd87a5d721",
     "files": {
       "index.html": "2c9d68cdc04051c4646b40bdcc61c1c144c3bb24b0c323faa3e8c52c47b53f00",
-      "test/baseline.test.js": "eb520d523f96aa505850e53947f42dbb1e818bcf28369bf227bf6c6dc539a063",
+      "test/baseline.test.js": "a1c8f193db338af7d47e8f08ef4d4f940b8b2dec9eadb5e80eb554e8c805de8f",
       "test/pipe.test.js": "4ff8f48d077205f82200ddc60f76b6d38394e7e5e40941813d95383871f1927a",
       "test/update-signature.test.js": "9cd1715bf33e82dfc2000f65a1ae5bfe15c9c33cfadd75c59925fa9c9d7c99eb"
     },
-    "seconds": 2.0,
+    "seconds": 5.6,
     "date": "2026-11-24",
     "bedrock": "2.9.5"
   },
