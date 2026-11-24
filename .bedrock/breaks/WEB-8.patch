@@ -1,5 +1,5 @@
 diff --git a/main.js b/main.js
-index 493a2e8..42047c9 100644
+index e5db07b..5a27994 100644
 --- a/main.js
 +++ b/main.js
 @@ -213,7 +213,7 @@ function hookCheck(autoFix, onlyIfBad) {

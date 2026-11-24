@@ -1,8 +1,8 @@
 diff --git a/reap/reap.ps1 b/reap/reap.ps1
-index 0e0c632..9b8941a 100644
+index cdc29e9..8cb9191 100644
 --- a/reap/reap.ps1
 +++ b/reap/reap.ps1
-@@ -114,7 +114,7 @@ function Stop-Leftover($snap, $row) {
+@@ -117,7 +117,7 @@ function Stop-Leftover($snap, $row) {
    foreach ($t in $tree) { Stop-Process -Id $t.ProcessId -Force -ErrorAction SilentlyContinue }  # children taskkill missed (already detached)
    $alive = Get-Process -Id $row.Pid -ErrorAction SilentlyContinue
    if ($alive -and $alive.WaitForExit(3000)) { $alive = $null }  # taskkill returns before the process has fully exited

@@ -1,8 +1,8 @@
 diff --git a/sessions.js b/sessions.js
-index 9138c0d..ad845ea 100644
+index 4c4b323..4efa550 100644
 --- a/sessions.js
 +++ b/sessions.js
-@@ -97,7 +97,7 @@ function reply(ev, choice) {
+@@ -98,7 +98,7 @@ function reply(ev, choice) {
      const decision =
        choice === 'deny' ? { behavior: 'deny', message: 'Denied from LOUPE' } :
        choice === 'always' && ev.permission_suggestions ? { behavior: 'allow', updatedPermissions: ev.permission_suggestions } :

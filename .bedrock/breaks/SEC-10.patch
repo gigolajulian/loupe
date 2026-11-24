@@ -1,5 +1,5 @@
 diff --git a/pipe.js b/pipe.js
-index 52290b0..f07b12e 100644
+index c8d3445..e3fdddf 100644
 --- a/pipe.js
 +++ b/pipe.js
 @@ -8,7 +8,7 @@ const path = require('path');

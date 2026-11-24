@@ -1,8 +1,8 @@
 diff --git a/store.js b/store.js
-index 1dd81b2..4dba67e 100644
+index 6e130f4..c069c94 100644
 --- a/store.js
 +++ b/store.js
-@@ -17,7 +17,6 @@ function save(file, data) {
+@@ -18,7 +18,6 @@ function save(file, data) {
    try {
      fs.mkdirSync(path.dirname(file), { recursive: true });
      fs.writeFileSync(tmp, typeof data === 'string' ? data : JSON.stringify(data));

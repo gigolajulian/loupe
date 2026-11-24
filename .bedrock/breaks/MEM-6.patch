@@ -1,5 +1,5 @@
 diff --git a/sessions.js b/sessions.js
-index 9138c0d..66627d0 100644
+index 4c4b323..7131c92 100644
 --- a/sessions.js
 +++ b/sessions.js
 @@ -10,7 +10,7 @@ const RANK = { need: 0, err: 1, work: 2, think: 3, ready: 4, done: 5, idle: 6 };

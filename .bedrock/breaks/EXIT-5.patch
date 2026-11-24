@@ -1,12 +1,12 @@
 diff --git a/store.js b/store.js
-index 1dd81b2..a076b7b 100644
+index 6e130f4..aea6bb4 100644
 --- a/store.js
 +++ b/store.js
-@@ -38,7 +38,7 @@ function capLog(file, max) {
- // keep the newest `keep` files in dir whose names start with prefix (ISO-stamped names sort by time)
+@@ -40,7 +40,7 @@ function capLog(file, max) {
+ // the newest keep-1. ISO-stamped names sort by time.
  function prune(dir, prefix, keep) {
    try {
--    const old = fs.readdirSync(dir).filter(f => f.startsWith(prefix)).sort().slice(0, -keep || undefined);
+-    const old = fs.readdirSync(dir).filter(f => f.startsWith(prefix)).sort().slice(1, 1 - keep || undefined);
 +    const old = fs.readdirSync(dir).filter(f => f.startsWith(prefix)).sort().slice(0, 0);
      for (const f of old) try { fs.unlinkSync(path.join(dir, f)); } catch {}
    } catch {}

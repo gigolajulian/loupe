@@ -1,5 +1,5 @@
 diff --git a/main.js b/main.js
-index 493a2e8..742b20c 100644
+index e5db07b..555615b 100644
 --- a/main.js
 +++ b/main.js
 @@ -502,7 +502,7 @@ app.whenReady().then(() => {
