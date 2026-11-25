@@ -4,6 +4,8 @@ One entry per release, in plain words. The version comes from package.json only.
 
 ## Unreleased
 
+- Releases stay hidden until they are signed, so an install never sees an update it would have to refuse.
+
 ## 0.3.4 (2026-11-25)
 
 - Uninstalling LOUPE now cleans up after itself: the start-with-Windows entry, its settings folder, `~/.loupe` and its own hooks in Claude Code's settings (backed up first, other hooks left alone).

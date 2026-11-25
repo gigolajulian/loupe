@@ -165,15 +165,14 @@ Claude sessions can leave dev servers, log tails and watchers running after you 
 ## Release an update
 
 1. Bump `version` in `package.json` (e.g. 0.2.12 to 0.2.13), the only place the version lives. Installs only update to a higher version. Add a plain-words entry for it to `CHANGELOG.md`.
-2. `npm test`.
+2. `npm test`, then commit and push the source: `git commit -am "LOUPE <version>" && git push`. Push first: the release tag and the Mac build come from what is on `main` when the release goes public.
 3. Publish. `GH_TOKEN` comes from the environment, never typed or pasted. With the GitHub CLI logged in:
    ```bash
    GH_TOKEN="$(gh auth token)" npm run release
    ```
-   This builds, uploads the installer, its `.blockmap` and `latest.yml`, publishes the release (`releaseType: release` in package.json, not a draft), then signs the installer and uploads `LOUPE-Setup-<version>.exe.sig`. Installs refuse an update without it. If signing fails after the release is up, fix it and run `node scripts/sign-release.js --upload`; installs retry at the next check. The key is `~/.release-keys/updates-ed25519.enc.pem` on Julian's PC, protected by a passphrase the release asks for in the terminal (or the file `RELEASE_SIGNING_KEY` points to; the plain `updates-ed25519.pem` is used only while no protected copy exists). `node scripts/protect-key.js` makes the protected copy once. It never goes in a repo. If it is lost, installed copies can't update again, so keep a backup.
-4. Commit and push the source: `git commit -am "LOUPE <version>" && git push`.
-5. Check https://github.com/gigolajulian/loupe/releases/latest lists `latest.yml`. Running installs pick it up within 4 hours, or now with tray "Check for updates", and ask before they restart to install. GitHub's release feed can lag a minute or two after publishing.
+   This builds, uploads the installer, its `.blockmap` and `latest.yml` to a draft release (`releaseType: draft` in package.json), signs the installer and uploads `LOUPE-Setup-<version>.exe.sig`, and only then makes the release public (`scripts/publish-release.js`). Installs refuse an update without the `.sig`, so nothing is public until it is there. If a step fails, the draft stays hidden: fix it, then run `node scripts/sign-release.js --upload` and `node scripts/publish-release.js`. The key is `~/.release-keys/updates-ed25519.enc.pem` on Julian's PC, protected by a passphrase the release asks for in the terminal (or the file `RELEASE_SIGNING_KEY` points to; the plain `updates-ed25519.pem` is used only while no protected copy exists). `node scripts/protect-key.js` makes the protected copy once. It never goes in a repo. If it is lost, installed copies can't update again, so keep a backup.
+4. Check https://github.com/gigolajulian/loupe/releases/latest lists `latest.yml`. Running installs pick it up within 4 hours, or now with tray "Check for updates", and ask before they restart to install. GitHub's release feed can lag a minute or two after publishing.
 
-Mac: on the Mac, `GH_TOKEN="$(gh auth token)" npx electron-builder --mac --publish always` adds the zips and `latest-mac.yml` to the same release. Mac installs only get a "LOUPE x is out" dialog, since unsigned apps can't update in place.
+Mac: GitHub builds the zips and adds them to the release when it goes public (`.github/workflows/mac-release.yml`). Mac installs only get a "LOUPE x is out" dialog, since unsigned apps can't update in place.
 
 The packaged app's `package.json` has no `build` key (electron-builder strips it), so the app never reads its own publish config.
