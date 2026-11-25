@@ -141,7 +141,7 @@ Claude sessions can leave dev servers, log tails and watchers running after you 
 ## How it reads sessions
 
 - **Project:** the session's folder. Worktrees count under their parent project.
-- **Step:** the session's title in the Claude app. "Site - QA" shows as QA. Sessions of one project share a row: `SITE  UI › QA › RELEASE`, with what it's doing on the line under.
+- **Step:** the session's title in the Claude app. "Site - QA" shows as QA. Each thread has its own row in the list, with what it's doing on the line under.
 - The 5 most active projects show. Needs-you comes first, in cyan, with a sound.
 
 ## Privacy
