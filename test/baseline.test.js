@@ -57,6 +57,7 @@ test('EXIT-2: uninstall takes out only LOUPE hooks (backup first) and ~/.loupe, 
   const env = { ...process.env, USERPROFILE: home, HOME: home, LOUPE_USERDATA: path.join(home, 'ud') };
   await new Promise((res, rej) => spawn(require('electron'), [ROOT, '--uninstall'], { env, stdio: 'ignore' }).on('exit', res).on('error', rej));
   const after = JSON.parse(fs.readFileSync(file, 'utf8'));
+  assert.ok(!JSON.stringify(after).includes('relay.js'), 'LOUPE hooks left in settings.json');
   assert.deepEqual(after, { model: 'opus', hooks: { PreToolUse: [other], Stop: [{ hooks: [{ type: 'command', command: 'say done' }] }] } });
   const baks = fs.readdirSync(claude).filter(f => f.startsWith('settings.json.bak-loupe-'));
   assert.equal(baks.length, 1);
