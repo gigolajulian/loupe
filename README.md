@@ -24,7 +24,7 @@ Questions and permissions show in the Claude Code thread and LOUPE mirrors them.
 ## In action
 
 <p align="center"><img src="docs/in-action-pill.jpg" width="820" alt="The LOUPE pill at the top of a full screen, showing one thread and the step it is on"></p>
-<p align="center"><img src="docs/in-action-panel.jpg" width="820" alt="LOUPE open over the Claude app: seven threads, each with what it is doing"></p>
+<p align="center"><img src="docs/in-action-panel.jpg" width="820" alt="LOUPE open over the Claude app: eight threads, each with what it is doing"></p>
 <p align="center"><img src="docs/in-action-question.jpg" width="820" alt="A question from Claude Code answered on LOUPE, over the Claude app"></p>
 
 ## How it works
