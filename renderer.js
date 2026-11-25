@@ -19,12 +19,11 @@ if (notch) {
 }
 
 const INK = { white: [236, 236, 236], cyan: [95, 195, 211], dim: [78, 78, 84] };
-const ANIM = { read: 'searching', edit: 'composing', run: 'working' };
 
 function look(s) {
   switch (s && s.state) {
     case 'need': return { anim: 'listening', ink: 'cyan' };
-    case 'work': return { anim: ANIM[s.step] || 'working', ink: 'white' };
+    case 'work': return { anim: 'working', ink: 'white' }; // one look for every call: a shape per call was distracting
     case 'think': return { anim: 'breathing', ink: 'white' };
     case 'done': return { anim: 'breathing', ink: 'white', still: true };
     // stopped: the searching globe, frozen and with its scan sweep switched off
@@ -33,20 +32,12 @@ function look(s) {
   }
 }
 
-function verb(s) {
-  const d = s.detail || '', f = d.split(/[\\/]/).filter(Boolean).pop() || d;
+// where: 'row' (panel), 'pill' or 'ear' (Mac notch). The plain-words line comes from sessions.js, cut at a word for each
+function verb(s, where = 'row') {
   switch (s.state) {
     case 'need': return 'needs you';
     case 'think': return 'thinking';
-    case 'work':
-      // Claude's own words for the call when it wrote some, lowercased to match the other states ("Check X" -> "check X")
-      if (s.desc) return /^[A-Z][a-z]/.test(s.desc) ? s.desc[0].toLowerCase() + s.desc.slice(1) : s.desc;
-      if (s.tool === 'Grep' || s.tool === 'Glob') return `searching for ${d}`;
-      if (s.tool === 'WebSearch' || s.tool === 'WebFetch') return `looking up ${d.replace(/^https?:\/\/(www\.)?/, '')}`;
-      if (s.step === 'read') return `reading ${f}`;
-      if (s.step === 'edit') return `editing ${f}`;
-      if (s.step === 'run') return `running ${d.split(' ')[0]}`;
-      return 'working';
+    case 'work': return (s.line && s.line[where]) || 'working';
     case 'done': return 'done';
     case 'ready': return 'ready';
     case 'err': return 'stopped';
@@ -68,6 +59,12 @@ orbs.forEach(c => {
   c._ctx = c.getContext('2d');
 });
 const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+// new text fades in instead of snapping
+function say(el, t) {
+  if (el.textContent === t) return;
+  el.textContent = t;
+  if (!reduce.matches) el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 320, easing: 'ease-out' });
+}
 // #5 #6 #11: a new mode morphs in over BLEND and holds at least HOLD, so quick tool hops read as one movement.
 // Waking from idle, the mark unfolds and the speed eases up from rest over EASE_IN. Needs-you pulses at WAIT speed.
 // Idle, the mark drifts a fraction of a pixel. Values picked in the issue mock (2026-11-21).
@@ -193,7 +190,7 @@ function sync(list) {
     r.className = 'r' + (s.state === 'need' ? ' need' : s.state === 'ready' ? ' new' : active(s) ? '' : ' quiet')
       + (!active(s) && s.state !== 'ready' && !(i && !active(list[i - 1]) && list[i - 1].state !== 'ready') ? ' first' : '') + (s.desktop ? '' : ' term') + (s.host ? ' go' : '');
     r.querySelector('.n').textContent = r.title = title(s);
-    r.querySelector('.v').textContent = verb(s);
+    say(r.querySelector('.v'), verb(s));
     const bg = bgCount(s.id);
     r.querySelector('.bg').textContent = bg ? `${bg} bg` : '';
   });
@@ -203,6 +200,14 @@ function sync(list) {
 const dismissed = new Set();
 const askKey = s => s.ask.req || `${s.id}:${s.ask.at}`;
 
+// the pill stays on one thread while it works, so it doesn't flip between threads on every call; needs-you still wins
+let pinned = null;
+function top(list) {
+  const s = list.find(x => x.state === 'need') || list.find(x => x.id === pinned && active(x)) || list[0];
+  pinned = s ? s.id : null;
+  return s;
+}
+
 window.loupe.onState(render);
 function render(list) {
   last = list;
@@ -210,22 +215,23 @@ function render(list) {
   const act = list.filter(active), app = act.filter(s => s.desktop), termS = act.filter(s => !s.desktop), term = termS.length;
 
   island.classList.toggle('empty', !list.length);
-  island.classList.toggle('idle', !!list[0] && (list[0].state === 'idle' || list[0].state === 'done')); // lighter glass
+  const head = top(list);
+  island.classList.toggle('idle', !!head && (head.state === 'idle' || head.state === 'done')); // lighter glass
   const asking = list.filter(s => s.ask && !dismissed.has(askKey(s)));
   // Claude in front: you answer there, so the panel doesn't pop open. The orb still shows "needs you".
   if (!closing) setOpen(hovered || (!claudeFront && (asking.length > 0 || list.some(s => s.state === 'need' && !s.ask))));
 
-  const lk = look(list[0]);
+  const lk = look(head);
   setLook(lk);
-  projEl.textContent = list[0] ? [list[0].name, step(list[0])].filter(Boolean).join(' › ') : '';
-  verbEl.textContent = list[0] ? verb(list[0]) : '';
+  say(projEl, head ? [head.name, step(head)].filter(Boolean).join(' › ') : '');
+  say(verbEl, head ? verb(head, notch ? 'ear' : 'pill') : '');
   verbEl.classList.toggle('need', lk.ink === 'cyan');
 
   const calm = !act.length;
   island.classList.toggle('calm', calm);
   // #8: new sessions show "ready" with the active ones; up to four recent idle ones sit under them, dimmed
   const ready = list.filter(s => s.state === 'ready' && s.desktop), recent = list.filter(s => !active(s) && s.state !== 'ready' && s.desktop).slice(0, 4);
-  sync([...app.slice(0, 8), ...ready, ...termS, ...recent]);
+  sync([...app.slice(0, 8).sort((a, b) => a.t0 - b.t0), ...ready, ...termS, ...recent]); // rows keep their place: by start, not by latest event
   const need = act.filter(s => s.state === 'need').length, n = app.length;
   $('hd').innerHTML = calm ? 'nothing running' : `<b>${n} active</b>${need ? ` · ${need} need${need === 1 ? 's' : ''} you` : ''}${ready.length ? ` · ${ready.length} ready` : ''}`;
   more.textContent = term ? `${sess.classList.contains('showterm') ? '−' : '+'}${term} terminal` : '';
