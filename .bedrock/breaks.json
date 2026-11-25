@@ -177,5 +177,10 @@
   "file": "scripts/release-key.js",
   "find": "throw new Error(`${path.basename(file)} is not passphrase-protected: run node scripts/protect-key.js`);",
   "replace": "return crypto.createPrivateKey(pem);"
+ },
+ "EXIT-2": {
+  "file": "hooks.js",
+  "find": "const remove = settings => strip(settings, isLoupe);",
+  "replace": "const remove = settings => strip(settings, () => false);"
  }
 }

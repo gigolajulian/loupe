@@ -23,6 +23,8 @@ let win, tray;
 
 // LOUPE_USERDATA (dev, scripts/run-app.js): a scratch profile, so a test copy never shares the real one's lock or settings
 if (process.env.LOUPE_USERDATA) app.setPath('userData', process.env.LOUPE_USERDATA);
+// `LOUPE --uninstall`: the uninstaller's cleanup step (build/installer.nsh, EXIT-2). No window, no lock, exits at once.
+if (process.argv.includes('--uninstall')) { try { require('./uninstall').cleanup(os.homedir()); } catch {} process.exit(0); }
 if (!app.requestSingleInstanceLock() || process.argv.includes('--quit')) process.exit(0); // --quit with no copy running: nothing to do
 // errors and crashes to userData/loupe.log (capped), so a failure can be traced; nothing leaves the PC
 const crash = store.logger(path.join(app.getPath('userData'), 'loupe.log'));

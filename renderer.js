@@ -222,6 +222,9 @@ function render(list) {
   verbEl.classList.toggle('need', lk.ink === 'cyan');
 
   const calm = !act.length;
+  // busy to calm: free the memory the busy panel used once it has settled, instead of minutes later (MEM-2)
+  if (calm && !island.classList.contains('calm')) trimSoon = setTimeout(() => window.loupe.trim(), 5000);
+  if (!calm) clearTimeout(trimSoon);
   island.classList.toggle('calm', calm);
   // #8: new sessions show "ready" with the active ones; up to four recent idle ones sit under them, dimmed
   const ready = list.filter(s => s.state === 'ready' && s.desktop), recent = list.filter(s => !active(s) && s.state !== 'ready' && s.desktop).slice(0, 4);
@@ -266,6 +269,7 @@ const CUE = {
   done: () => note(1760, 0, .06, 'sine', .12),
   err: () => { note(220, 0, .15, 'triangle', .25); note(196, .17, .25, 'triangle', .25); },
 };
+let trimSoon = 0;
 const seen = new Map(); // session id -> last state; a session's first sighting stays silent
 function cues(list) {
   for (const s of list) {

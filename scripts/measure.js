@@ -1,6 +1,7 @@
 // MEM-2, EXIT-4, PERF-2: start time, then memory and CPU of LOUPE's whole process tree every 30 s for 10 min idle and
-// 10 min in use (8 sessions sending hook events every 2 s). Windows, scratch profile (run-app.js).
-//   node scripts/measure.js [minutes per phase, default 10] > out.json
+// 10 min in use (8 sessions sending hook events every 2 s), then 3 min after every session stopped. Windows, scratch
+// profile (run-app.js). LOUPE_EXE=<LOUPE.exe> measures a packaged build.
+//   node scripts/measure.js [minutes idle and in use, default 10] > out.json
 const { launch, procs, tree } = require('./run-app');
 
 const MIN = +(process.argv[2] || 10), MB = 1 << 20;
@@ -22,7 +23,7 @@ const sample = pid => {
   await app.ready();
   await sleep(30e3); // warm-up
   const out = { startMs: starts, cores: require('os').cpus().length, phases: {} };
-  for (const phase of ['idle', 'use']) {
+  for (const phase of ['idle', 'use', 'after']) {
     let busy = null, i = 0;
     if (phase === 'use') busy = setInterval(() => {
       const s = `s${i % 8}`, n = i++ % 6, cwd = `C:\\P\\project ${i % 8}`;
@@ -32,11 +33,13 @@ const sample = pid => {
         { hook_event_name: 'PostToolUse' }, { hook_event_name: 'Stop' }][n];
       app.send({ session_id: s, cwd, orb_ts: Date.now(), ...ev }).catch(() => {});
     }, 2000 / 8);
-    const rows = [], t0 = Date.now();
-    for (let k = 0; k <= MIN * 2; k++) {
+    // the load ends: every thread finishes, as when the work is done
+    if (phase === 'after') for (let k = 0; k < 8; k++) await app.send({ session_id: `s${k}`, cwd: `C:\\P\\project ${k}`, orb_ts: Date.now(), hook_event_name: 'Stop' });
+    const rows = [], t0 = Date.now(), n = phase === 'after' ? 6 : MIN * 2;
+    for (let k = 0; k <= n; k++) {
       const s = sample(app.proc.pid);
       rows.push({ t: Math.round((Date.now() - t0) / 1000), ...s, privateMB: +s.privateMB.toFixed(1), wsMB: +s.wsMB.toFixed(1) });
-      if (k < MIN * 2) await sleep(30e3);
+      if (k < n) await sleep(30e3);
     }
     clearInterval(busy);
     const secs = (rows.at(-1).t - rows[0].t) || 1, cpu = (rows.at(-1).cpu100ns - rows[0].cpu100ns) / 1e7;
