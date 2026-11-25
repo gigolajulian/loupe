@@ -4,14 +4,15 @@ Drafted by Claude for the bedrock full run (2026-11-24). Julian confirms each pa
 
 ## Owner (OPS-9)
 
-- Julian owns LOUPE: GitHub issues, CI failures and Dependabot PRs on gigolajulian/loupe come to him.
+- Julian owns LOUPE: GitHub issues, CI failures and Dependabot PRs on loupedesk/loupe come to him.
 - Nathan is a tester (installs releases, files issues).
+- The repo moved from gigolajulian/loupe to loupedesk/loupe on 2026-11-25. Copies up to 0.3.4 still ask the old address for updates and reach the new one through GitHub's redirect. Never create or fork a repo named `loupe` under gigolajulian: that ends the redirect and those copies stop updating.
 
 What LOUPE relies on:
 
 | Service or part | Used for | If it breaks |
 |---|---|---|
-| GitHub releases (gigolajulian/loupe) | installers, `latest.yml`, `.sig` files | no updates; LOUPE keeps running |
+| GitHub releases (loupedesk/loupe) | installers, `latest.yml`, `.sig` files | no updates; LOUPE keeps running |
 | GitHub Actions | `npm test` on Windows and macOS for each push and PR | merges go untested |
 | Claude Code hooks (`~/.claude/settings.json`) | every event LOUPE shows | nothing shows; the tray hook check says so |
 | Node.js on PATH | runs `~/.loupe/relay.js` for each hook | nothing shows; Claude Code works as usual |

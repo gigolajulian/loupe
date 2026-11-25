@@ -4,5 +4,5 @@
 const { execFileSync } = require('child_process');
 const { version } = require('../package.json');
 
-execFileSync('gh', ['release', 'edit', `v${version}`, '--draft=false', '-R', 'gigolajulian/loupe'], { stdio: 'inherit' });
+execFileSync('gh', ['release', 'edit', `v${version}`, '--draft=false', '-R', 'loupedesk/loupe'], { stdio: 'inherit' });
 console.log(`published v${version}`);

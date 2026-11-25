@@ -79,7 +79,7 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "gigolajulian",
+      "owner": "loupedesk",
       "repo": "loupe",
       "releaseType": "draft"
     }

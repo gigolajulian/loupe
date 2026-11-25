@@ -74,7 +74,7 @@ const CHECKS = {
   'PRIV-1'() {
     for (const f of APP) {
       for (const m of read(f).matchAll(/https?:\/\/[^\s'"`)<>]+/g)) {
-        if (!/^https:\/\/github\.com\/gigolajulian\/loupe\//.test(m[0]) && !/^http:\/\/www\.w3\.org\//.test(m[0])) fail(`${f} calls ${m[0]}`);
+        if (!/^https:\/\/github\.com\/loupedesk\/loupe\//.test(m[0]) && !/^http:\/\/www\.w3\.org\//.test(m[0])) fail(`${f} calls ${m[0]}`);
       }
       if (/<script[^>]+src=["']?https?:/i.test(read(f))) fail(`${f} loads a remote script`);
     }
