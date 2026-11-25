@@ -4,6 +4,8 @@ One entry per release, in plain words. The version comes from package.json only.
 
 ## Unreleased
 
+- Releases stay hidden until they are signed, so an install never sees an update it would have to refuse.
+
 ## 0.3.3 (2026-11-25)
 
 - Status lines read in plain words: a row shows the step its thread is on (from the thread's own task list), or the last note Claude wrote, instead of "running cd" or a file name. Long lines are cut at a word.

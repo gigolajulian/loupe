@@ -11,7 +11,7 @@
     "icons": "sh logo/export-icons.sh",
     "dist": "electron-builder --win nsis",
     "dist:mac": "sh mac/build.sh && electron-builder --mac",
-    "release": "electron-builder --win nsis --publish always && node scripts/sign-release.js --upload",
+    "release": "electron-builder --win nsis --publish always && node scripts/sign-release.js --upload && node scripts/publish-release.js",
     "test": "node --test && node sessions.js && node hooks.js"
   },
   "build": {
@@ -81,7 +81,7 @@
       "provider": "github",
       "owner": "gigolajulian",
       "repo": "loupe",
-      "releaseType": "release"
+      "releaseType": "draft"
     }
   },
   "devDependencies": {
