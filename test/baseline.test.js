@@ -45,6 +45,55 @@ const run = (cmd, args, env, input) => new Promise(res => {
   p.stdin.end(input);
 });
 
+test('EXIT-2: uninstall takes out only LOUPE hooks (backup first) and ~/.loupe, and the installer runs it', async () => {
+  const home = tmp(), claude = path.join(home, '.claude'), file = path.join(claude, 'settings.json');
+  fs.mkdirSync(claude); fs.mkdirSync(path.join(home, '.loupe')); fs.writeFileSync(path.join(home, '.loupe', 'relay.js'), '');
+  const other = { matcher: 'Bash', hooks: [{ type: 'command', command: 'python guard.py' }] };
+  const settings = hooks.fix({ model: 'opus', hooks: { PreToolUse: [other], Stop: [{ hooks: [{ type: 'command', command: 'say done' }] }] } },
+    path.join(home, '.loupe', 'relay.js'));
+  const text = JSON.stringify(settings, null, 2);
+  fs.writeFileSync(file, text);
+  // the real path: the app started the way build/installer.nsh starts it
+  const env = { ...process.env, USERPROFILE: home, HOME: home, LOUPE_USERDATA: path.join(home, 'ud') };
+  await new Promise((res, rej) => spawn(require('electron'), [ROOT, '--uninstall'], { env, stdio: 'ignore' }).on('exit', res).on('error', rej));
+  const after = JSON.parse(fs.readFileSync(file, 'utf8'));
+  assert.ok(!JSON.stringify(after).includes('relay.js'), 'LOUPE hooks left in settings.json');
+  assert.deepEqual(after, { model: 'opus', hooks: { PreToolUse: [other], Stop: [{ hooks: [{ type: 'command', command: 'say done' }] }] } });
+  const baks = fs.readdirSync(claude).filter(f => f.startsWith('settings.json.bak-loupe-'));
+  assert.equal(baks.length, 1);
+  assert.equal(fs.readFileSync(path.join(claude, baks[0]), 'utf8'), text);
+  assert.ok(!fs.existsSync(path.join(home, '.loupe')));
+  // nothing of LOUPE's left: a second run changes nothing and makes no second backup
+  require('../uninstall').cleanup(home);
+  assert.equal(fs.readdirSync(claude).filter(f => f.startsWith('settings.json.bak-loupe-')).length, 1);
+  const nsh = src('build/installer.nsh'), pkg = JSON.parse(src('package.json')).build;
+  assert.ok(/\$\{ifNot\} \$\{isUpdated\}[^!]*ExecWait/.test(nsh) && nsh.includes(String.raw`ExecWait '"$INSTDIR\LOUPE.exe" --uninstall'`));
+  assert.ok(nsh.includes(String.raw`DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "com.juliangigola.loupe"`));
+  assert.equal(pkg.nsis.deleteAppDataOnUninstall, true);
+  // login: only after the first-run question is answered yes, never switched on unasked
+  const main = src('main.js');
+  assert.ok(main.includes('app.setLoginItemSettings({ openAtLogin: response === 0 });'));
+  assert.ok(!/openAtLogin: true/.test(main));
+  assert.ok(pkg.files.includes('uninstall.js'));
+  fs.rmSync(home, { recursive: true, force: true });
+});
+
+test('MEM-2: when every thread goes quiet the island hands Blink its caches back (5 s later, cancelled by new work)', () => {
+  assert.match(src('preload.js'), /trim: \(\) => webFrame\.clearCache\(\)/);
+  const r = src('renderer.js');
+  assert.match(r, /if \(calm && !island\.classList\.contains\('calm'\)\) trimSoon = setTimeout\(\(\) => window\.loupe\.trim\(\), 5000\);/);
+  assert.match(r, /if \(!calm\) clearTimeout\(trimSoon\);/);
+});
+
+test('SEC-9: the release signer refuses a signing key that is not passphrase-protected', async () => {
+  const dir = tmp(), file = path.join(dir, 'k.pem');
+  fs.writeFileSync(file, require('node:crypto').generateKeyPairSync('ed25519').privateKey.export({ type: 'pkcs8', format: 'pem' }));
+  const was = process.env.RELEASE_SIGNING_KEY;
+  process.env.RELEASE_SIGNING_KEY = file;
+  try { await assert.rejects(require('../scripts/release-key').loadKey(), /not passphrase-protected/); }
+  finally { if (was === undefined) delete process.env.RELEASE_SIGNING_KEY; else process.env.RELEASE_SIGNING_KEY = was; fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
 test('SEC-5: an unknown or broken answer never allows; it goes back to the thread', () => {
   for (const bad of ['garbage', undefined, null, {}, 1, ['allow'], 'Allow']) assert.strictEqual(reply(PERM, bad), null, String(bad));
   for (const bad of ['allow', null, ['x'], { 'Q?': 1 }]) assert.strictEqual(reply(QUESTION, bad), null, JSON.stringify(bad));

@@ -1,0 +1,13 @@
+diff --git a/hooks.js b/hooks.js
+index c066ae5..77ca41f 100644
+--- a/hooks.js
++++ b/hooks.js
+@@ -39,7 +39,7 @@ function strip(settings, drop) {
+ }
+ 
+ // uninstall (EXIT-2): only LOUPE's own hooks go
+-const remove = settings => strip(settings, isLoupe);
++const remove = settings => strip(settings, () => false);
+ 
+ // drops every LOUPE and Coucou hook, then adds one LOUPE entry per event. Other hooks stay as they are.
+ function fix(settings, relay) {

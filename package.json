@@ -28,6 +28,7 @@
       "renderer.js",
       "sessions.js",
       "hooks.js",
+      "uninstall.js",
       "relay.js",
       "reap/reap.ps1",
       "reap/allow.txt",
@@ -73,7 +74,8 @@
       "oneClick": true,
       "perMachine": false,
       "runAfterFinish": true,
-      "shortcutName": "LOUPE"
+      "shortcutName": "LOUPE",
+      "deleteAppDataOnUninstall": true
     },
     "publish": {
       "provider": "github",

@@ -22,26 +22,35 @@ function check(settings, relay) {
   return { events, stale, coucou, ok: events.every(e => e.ok) && !stale.length && !coucou.length };
 }
 
-// drops every LOUPE and Coucou hook, then adds one LOUPE entry per event. Other hooks stay as they are.
-function fix(settings, relay) {
+// a copy without the hooks whose command matches drop; groups and events left empty go too. Other hooks stay as they are.
+function strip(settings, drop) {
   const out = JSON.parse(JSON.stringify(settings || {}));
   const hooks = out.hooks = out.hooks || {};
   for (const name of Object.keys(hooks)) {
     if (!Array.isArray(hooks[name])) continue;
     hooks[name] = hooks[name].flatMap(g => {
       if (!Array.isArray(g.hooks)) return [g];
-      const keep = g.hooks.filter(h => !isLoupe(h.command || '') && !isCoucou(h.command || ''));
+      const keep = g.hooks.filter(h => !drop(h.command || ''));
       return keep.length === g.hooks.length ? [g] : keep.length ? [{ ...g, hooks: keep }] : [];
     });
     if (!hooks[name].length) delete hooks[name];
   }
+  return out;
+}
+
+// uninstall (EXIT-2): only LOUPE's own hooks go
+const remove = settings => strip(settings, isLoupe);
+
+// drops every LOUPE and Coucou hook, then adds one LOUPE entry per event. Other hooks stay as they are.
+function fix(settings, relay) {
+  const out = strip(settings, c => isLoupe(c) || isCoucou(c)), hooks = out.hooks;
   for (const name of EVENTS) {
     (hooks[name] = hooks[name] || []).push({ hooks: [{ type: 'command', command: command(relay), timeout: timeout(name) }] });
   }
   return out;
 }
 
-module.exports = { EVENTS, check, fix, command };
+module.exports = { EVENTS, check, fix, remove, command };
 
 if (require.main === module) {
   const assert = require('assert');
@@ -67,5 +76,9 @@ if (require.main === module) {
   assert.equal(f.hooks.Stop.at(-1).hooks[0].timeout, 5);
   assert.deepEqual(fix(f, relay), f); // fixing twice changes nothing
   assert.ok(check(fix({}, relay), relay).ok);
+  const r = remove(f); // only LOUPE's hooks go, Coucou and the rest stay
+  assert.deepEqual(r.hooks.PreToolUse, [s.hooks.PreToolUse[0]]);
+  assert.deepEqual(r.hooks.Stop, [{ hooks: [{ type: 'command', command: 'say done' }] }]);
+  assert.ok(!JSON.stringify(remove(s)).includes('relay.js') && JSON.stringify(remove(s)).includes('coucou'));
   console.log('hooks ok');
 }

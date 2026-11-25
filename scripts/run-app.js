@@ -1,5 +1,6 @@
 // Starts this copy of LOUPE in a scratch profile for checks (exit, memory, CPU, start time). Windows only.
 // Scratch home, AppData and userData: it never touches the real ~/.loupe (live sessions' hooks), settings or lock.
+// LOUPE_EXE=<path to LOUPE.exe>: run a packaged build instead of this source tree (it must honour LOUPE_USERDATA, 0.3.3+).
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -28,17 +29,20 @@ function tree(all, pid) {
 }
 
 function launch({ cfg = {}, env: extra = {} } = {}) {
+  // an older build ignores LOUPE_USERDATA, shares the real lock, and its --quit would close the running LOUPE
+  if (process.env.LOUPE_EXE && !fs.readFileSync(path.join(path.dirname(process.env.LOUPE_EXE), 'resources', 'app.asar')).includes('LOUPE_USERDATA'))
+    throw new Error(`${process.env.LOUPE_EXE} predates LOUPE_USERDATA (0.3.3+), so it can't run in a scratch profile`);
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'loupe-run-'));
   const appdata = path.join(home, 'AppData', 'Roaming'), userData = path.join(appdata, 'loupe');
   fs.mkdirSync(path.join(home, '.claude'), { recursive: true });
   fs.mkdirSync(userData, { recursive: true });
   // hooks already set and the first-run choices made, so no dialog opens
   fs.writeFileSync(path.join(home, '.claude', 'settings.json'), JSON.stringify(hooks.fix({}, path.join(home, '.loupe', 'relay.js'))));
-  fs.writeFileSync(path.join(userData, 'config.json'), JSON.stringify({ procsAsked: true, ...cfg }));
+  fs.writeFileSync(path.join(userData, 'config.json'), JSON.stringify({ procsAsked: true, loginSet: true, ...cfg }));
   const env = { ...process.env, USERPROFILE: home, HOME: home, APPDATA: appdata, LOCALAPPDATA: path.join(home, 'AppData', 'Local'), LOUPE_USERDATA: userData, ...extra };
-  const electron = require('electron');
+  const electron = process.env.LOUPE_EXE || require('electron'), args = process.env.LOUPE_EXE ? [] : [ROOT];
   const t0 = Date.now();
-  const proc = spawn(electron, [ROOT], { env, stdio: 'ignore' });
+  const proc = spawn(electron, args, { env, stdio: 'ignore' });
   const pipeFile = path.join(home, '.loupe', 'pipe');
   return {
     proc, home, env, t0, electron,
@@ -58,7 +62,7 @@ function launch({ cfg = {}, env: extra = {} } = {}) {
       s.on('error', rej);
     }),
     // the tray's Quit, through a second instance
-    quit: () => new Promise(res => spawn(electron, [ROOT, '--quit'], { env, stdio: 'ignore' }).on('exit', res)),
+    quit: () => new Promise(res => spawn(electron, [...args, '--quit'], { env, stdio: 'ignore' }).on('exit', res)),
     exited: () => new Promise(res => (proc.exitCode !== null ? res() : proc.on('exit', res))),
   };
 }

@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webFrame } = require('electron');
 
 contextBridge.exposeInMainWorld('loupe', {
   onState: cb => ipcRenderer.on('state', (_, list) => cb(list)),
@@ -14,5 +14,6 @@ contextBridge.exposeInMainWorld('loupe', {
   onProcs: cb => ipcRenderer.on('procs', (_, p) => cb(p)), // Processes: { leftovers, sessions } or null when off
   procs: () => ipcRenderer.send('procs'), // the panel opened: refresh soon
   kill: pids => ipcRenderer.invoke('kill', pids), // after the confirm; resolves with reap's result lines
+  trim: () => webFrame.clearCache(), // all threads went quiet: hand Blink's caches back (MEM-2)
   onMenubar: cb => ipcRenderer.on('menubar', (_, m) => cb(m)), // Mac: where app menus end and icons start
 });
