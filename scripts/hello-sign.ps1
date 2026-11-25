@@ -3,37 +3,61 @@
 #   hello-sign.ps1 pubkey   prints the public key, no prompt
 #   hello-sign.ps1 check    prints whether the key is TPM-attested, no prompt
 #   hello-sign.ps1 sign     reads the text to sign on stdin, shows the Hello prompt, prints the signature (base64)
+# The WinRT calls are C#, compiled here by Windows' own compiler: PowerShell 5.1 can't read the IBuffers WinRT returns.
 param([Parameter(Mandatory)][ValidateSet('create', 'pubkey', 'check', 'sign')][string]$Action, [string]$Name = 'jg-release-updates')
 $ErrorActionPreference = 'Stop'
-Add-Type -AssemblyName System.Runtime.WindowsRuntime
-$KCM = [Windows.Security.Credentials.KeyCredentialManager, Windows.Security.Credentials, ContentType = WindowsRuntime]
-$null = [Windows.Security.Cryptography.Core.CryptographicPublicKeyBlobType, Windows.Security.Cryptography.Core, ContentType = WindowsRuntime]
-$asTask = [System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object { $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation`1' } | Select-Object -First 1
-function Await($op, [type]$t) { $asTask.MakeGenericMethod($t).Invoke($null, @($op)).GetAwaiter().GetResult() }
-$Buf = [System.Runtime.InteropServices.WindowsRuntime.WindowsRuntimeBufferExtensions]
-$RR = [Windows.Security.Credentials.KeyCredentialRetrievalResult]
-
-if ($Action -eq 'create') {
-  $r = Await ($KCM::RequestCreateAsync($Name, [Windows.Security.Credentials.KeyCredentialCreationOption]::FailIfExists)) $RR
-} else {
-  $r = Await ($KCM::OpenAsync($Name)) $RR
+$fw = [Runtime.InteropServices.RuntimeEnvironment]::GetRuntimeDirectory()
+$md = Join-Path $env:SystemRoot 'System32\WinMetadata'
+$src = @'
+using System;
+using System.Threading;
+using Windows.Foundation;
+using Windows.Security.Credentials;
+using Windows.Security.Cryptography;
+using Windows.Security.Cryptography.Core;
+using Windows.Storage.Streams;
+public static class HelloKey {
+  // waits on a WinRT call by polling: no Windows SDK on this PC for the AsTask helpers
+  static T Wait<T>(IAsyncOperation<T> op) {
+    while (op.Status == AsyncStatus.Started) Thread.Sleep(20);
+    if (op.Status != AsyncStatus.Completed) throw new Exception("Windows Hello call " + op.Status + (op.ErrorCode != null ? ": " + op.ErrorCode.Message : ""));
+    return op.GetResults();
+  }
+  static string B64(IBuffer b) { byte[] a; CryptographicBuffer.CopyToByteArray(b, out a); return Convert.ToBase64String(a); }
+  static KeyCredential Get(string name, bool create) {
+    var r = Wait(create ? KeyCredentialManager.RequestCreateAsync(name, KeyCredentialCreationOption.FailIfExists) : KeyCredentialManager.OpenAsync(name));
+    if (r.Status != KeyCredentialStatus.Success) throw new Exception("Hello key " + name + ": " + r.Status);
+    return r.Credential;
+  }
+  public static string Pub(string name, bool create) {
+    return B64(Get(name, create).RetrievePublicKey(CryptographicPublicKeyBlobType.X509SubjectPublicKeyInfo));
+  }
+  public static string Check(string name) {
+    return Wait(Get(name, false).GetAttestationAsync()).Status.ToString();
+  }
+  public static string Sign(string name, byte[] data) {
+    var s = Wait(Get(name, false).RequestSignAsync(CryptographicBuffer.CreateFromByteArray(data)));
+    if (s.Status != KeyCredentialStatus.Success) throw new Exception("Hello sign: " + s.Status);
+    return B64(s.Result);
+  }
 }
-if ($r.Status -ne 'Success') { [Console]::Error.WriteLine("Hello key ${Name}: $($r.Status)"); exit 2 }
-$c = $r.Credential
-
-switch ($Action) {
-  { $_ -in 'create', 'pubkey' } {
-    [Convert]::ToBase64String($Buf::ToArray($c.RetrievePublicKey([Windows.Security.Cryptography.Core.CryptographicPublicKeyBlobType]::X509SubjectPublicKeyInfo)))
+'@
+# compiled in memory by CodeDom, which hands the .winmd references to csc without loading them into PowerShell
+$cp = New-Object CodeDom.Compiler.CompilerParameters
+$cp.GenerateInMemory = $true
+$cp.ReferencedAssemblies.AddRange([string[]]@('System.Runtime.dll' | ForEach-Object { Join-Path $fw $_ }) +
+  [string[]]@('Windows.Foundation.winmd', 'Windows.Security.winmd', 'Windows.Storage.winmd' | ForEach-Object { Join-Path $md $_ }))
+$res = (New-Object Microsoft.CSharp.CSharpCodeProvider).CompileAssemblyFromSource($cp, $src)
+if ($res.Errors.HasErrors) { $res.Errors | ForEach-Object { [Console]::Error.WriteLine($_.ToString()) }; exit 4 }
+$HK = $res.CompiledAssembly.GetType('HelloKey')
+try {
+  switch ($Action) {
+    'create' { $HK::Pub($Name, $true) }
+    'pubkey' { $HK::Pub($Name, $false) }
+    'check' { 'attestation: ' + $HK::Check($Name) }  # Success means a TPM-backed key with a TPM attestation
+    'sign' {
+      $ms = New-Object IO.MemoryStream; [Console]::OpenStandardInput().CopyTo($ms)  # the exact bytes, no decoding
+      $HK::Sign($Name, $ms.ToArray())
+    }
   }
-  'check' {
-    $a = Await ($c.GetAttestationAsync()) ([Windows.Security.Credentials.KeyCredentialAttestationResult])
-    "attestation: $($a.Status)"  # Success means a TPM-backed key with a TPM attestation
-  }
-  'sign' {
-    [Console]::InputEncoding = [Text.UTF8Encoding]::new($false)
-    $text = [Console]::In.ReadToEnd()
-    $s = Await ($c.RequestSignAsync($Buf::AsBuffer([Text.Encoding]::UTF8.GetBytes($text)))) ([Windows.Security.Credentials.KeyCredentialOperationResult])
-    if ($s.Status -ne 'Success') { [Console]::Error.WriteLine("Hello sign: $($s.Status)"); exit 3 }
-    [Convert]::ToBase64String($Buf::ToArray($s.Result))
-  }
-}
+} catch { [Console]::Error.WriteLine($_.Exception.GetBaseException().Message); exit 2 }

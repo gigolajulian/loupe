@@ -7,7 +7,7 @@ const fs = require('fs');
 
 // HELLO: the everyday key, RSA-2048 held by Windows Hello in the PC's TPM (can't be copied off it, a fingerprint or
 // PIN per signature). RECOVERY: the passphrase-locked ed25519 key, kept for when the Hello key is lost (README).
-const HELLO = '';
+const HELLO = 'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0dmGaWMVQXr9tv3WVxpRHWO9fpOsQz7jCVrJJk6/j2VmPAaNhwWr8ml+Q/C6J+OaanYafbo2xN2OcgLCCtjLl5Hjj9WGswcPClquHxMkE40XQ+dhMKV+ZGODa9e0Nrc3sagxonxfottRETPo2oMmW7aMZIA3Zs/0b/iI7u1dpI2/aTXgx7OE815n1lZ2rQ3JXeU+tGceI/S5LfEcENnyKbHe5ZG62u2iH6kqtqes1AMz1fhGzwtUv/n0k8uFoI37QRv0xDxf28oJVJI3qdXjDJM3IT+1k8272CYZpwNpIsPhOLnYR6LpbnihNtAh24I2olntZZSYJxT7DVhHOcR9twIDAQAB';
 const RECOVERY = 'MCowBQYDK2VwAyEA8gcyEU9pjNP2Vp6fuBZe3IQmxU4Wdn8V2VxFNjuh0CQ=';
 const KEYS = [HELLO, RECOVERY];
 // the algorithm comes from the trusted key, never from the .sig file
