@@ -91,7 +91,7 @@
   "dependencies": {
     "electron-updater": "^6.8.11",
     "koffi": "^3.3.3",
-    "thinking-orbs": "^0.3.1"
+    "thinking-orbs": "^0.3.2"
   },
   "allowScripts": {
     "electron@45.4.1": true,
