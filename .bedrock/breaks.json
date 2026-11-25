@@ -172,5 +172,10 @@
   "file": "index.html",
   "find": "--faint: #939399;",
   "replace": "--faint: #77777e;"
+ },
+ "SEC-9": {
+  "file": "scripts/release-key.js",
+  "find": "throw new Error(`${path.basename(file)} is not passphrase-protected: run node scripts/protect-key.js`);",
+  "replace": "return crypto.createPrivateKey(pem);"
  }
 }

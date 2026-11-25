@@ -1,0 +1,13 @@
+diff --git a/scripts/release-key.js b/scripts/release-key.js
+index c649d3e..42b6081 100644
+--- a/scripts/release-key.js
++++ b/scripts/release-key.js
+@@ -30,7 +30,7 @@ function ask(question) {
+ async function loadKey() {
+   const file = process.env.RELEASE_SIGNING_KEY || PROTECTED;
+   const pem = fs.readFileSync(file, 'utf8');
+-  if (!pem.includes('-----BEGIN ENCRYPTED PRIVATE KEY-----')) throw new Error(`${path.basename(file)} is not passphrase-protected: run node scripts/protect-key.js`);
++  if (!pem.includes('-----BEGIN ENCRYPTED PRIVATE KEY-----')) return crypto.createPrivateKey(pem);
+   const passphrase = await ask(`Passphrase for ${path.basename(file)}: `);
+   try { return crypto.createPrivateKey({ key: pem, passphrase }); }
+   catch { throw new Error('wrong passphrase'); }

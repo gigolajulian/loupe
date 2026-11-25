@@ -1,7 +1,7 @@
 // Signs the Windows installer so installed copies accept it as an update. Runs after electron-builder in `npm run release`;
 // alone: `node scripts/sign-release.js` writes the .sig, `--upload` also adds it to release v<version>.
-// Key: scripts/release-key.js (RELEASE_SIGNING_KEY, else the passphrase-protected ~/.release-keys/updates-ed25519.enc.pem,
-// else the plain .pem). Never in a repo, never printed.
+// Key: scripts/release-key.js (RELEASE_SIGNING_KEY, else ~/.release-keys/updates-ed25519.enc.pem; passphrase-protected
+// only). Never in a repo, never printed.
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');

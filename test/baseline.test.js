@@ -45,6 +45,15 @@ const run = (cmd, args, env, input) => new Promise(res => {
   p.stdin.end(input);
 });
 
+test('SEC-9: the release signer refuses a signing key that is not passphrase-protected', async () => {
+  const dir = tmp(), file = path.join(dir, 'k.pem');
+  fs.writeFileSync(file, require('node:crypto').generateKeyPairSync('ed25519').privateKey.export({ type: 'pkcs8', format: 'pem' }));
+  const was = process.env.RELEASE_SIGNING_KEY;
+  process.env.RELEASE_SIGNING_KEY = file;
+  try { await assert.rejects(require('../scripts/release-key').loadKey(), /not passphrase-protected/); }
+  finally { if (was === undefined) delete process.env.RELEASE_SIGNING_KEY; else process.env.RELEASE_SIGNING_KEY = was; fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
 test('SEC-5: an unknown or broken answer never allows; it goes back to the thread', () => {
   for (const bad of ['garbage', undefined, null, {}, 1, ['allow'], 'Allow']) assert.strictEqual(reply(PERM, bad), null, String(bad));
   for (const bad of ['allow', null, ['x'], { 'Q?': 1 }]) assert.strictEqual(reply(QUESTION, bad), null, JSON.stringify(bad));

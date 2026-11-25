@@ -1,6 +1,6 @@
 # Running LOUPE
 
-Drafted by Claude for the bedrock full run (2026-11-24). Julian confirms each part; BASELINE.md says which.
+Drafted by Claude for the bedrock full run (2026-11-24). Julian confirms each part; BASELINE.md says which. Secrets updated 2026-11-25.
 
 ## Owner (OPS-9)
 
@@ -21,7 +21,7 @@ What LOUPE relies on:
 
 | Secret | Unlocks | Where it lives | Rotate |
 |---|---|---|---|
-| Update signing key (ed25519) | Installs accept an update signed by it | `~/.release-keys/updates-ed25519.enc.pem` (passphrase, `scripts/protect-key.js`) on Julian's PC, plus his backup. The plain `.pem` beside it stays until CREEKY, LEADS DESKTOP and KelvinRGB, which share the key, read the protected copy | Make a new key, ship one release signed by the old key whose `PUBKEY` in `update-signature.js` is the new one, then sign with the new key. A lost key means installs can't update again, so the backup matters. |
+| Update signing key (ed25519) | Installs accept an update signed by it | `~/.release-keys/updates-ed25519.enc.pem` on Julian's PC, passphrase-protected (passphrase in his Apple Passwords). Off-PC backup: `D:\Dropbox\KEYS\kelvinrgb-updates-ed25519.enc.pem`, the same encrypted file. The same key signs KelvinRGB, CREEKY and LEADS DESKTOP (their embedded public key matches `~/.release-keys/updates-ed25519.pub.pem` and `PUBKEY` in `update-signature.js`). No plain copy on disk: the plain `.pem` was deleted 2026-11-25, and `scripts/release-key.js` refuses an unprotected key (SEC-9) | Make a new key, ship one release signed by the old key whose `PUBKEY` in `update-signature.js` is the new one, then sign with the new key. KelvinRGB, CREEKY and LEADS DESKTOP need the same switch, since they share the key. A lost key means installs can't update again, so the backup matters. |
 | `GH_TOKEN` | Publishing releases | Not stored: `gh auth token` at release time | `gh auth refresh`, or revoke the session in GitHub settings |
 
 LOUPE itself keeps no secrets on users' PCs. The pipe address in `~/.loupe/pipe` is random per launch and only the user's account can read it.
