@@ -69,6 +69,10 @@ test('EXIT-2: uninstall takes out only LOUPE hooks (backup first) and ~/.loupe, 
   assert.ok(/\$\{ifNot\} \$\{isUpdated\}[^!]*ExecWait/.test(nsh) && nsh.includes(String.raw`ExecWait '"$INSTDIR\LOUPE.exe" --uninstall'`));
   assert.ok(nsh.includes(String.raw`DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "com.juliangigola.loupe"`));
   assert.equal(pkg.nsis.deleteAppDataOnUninstall, true);
+  // login: only after the first-run question is answered yes, never switched on unasked
+  const main = src('main.js');
+  assert.ok(main.includes('app.setLoginItemSettings({ openAtLogin: response === 0 });'));
+  assert.ok(!/openAtLogin: true/.test(main));
   assert.ok(pkg.files.includes('uninstall.js'));
   fs.rmSync(home, { recursive: true, force: true });
 });
