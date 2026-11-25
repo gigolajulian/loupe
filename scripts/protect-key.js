@@ -5,7 +5,7 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const { ask, PLAIN, PROTECTED } = require('./release-key');
-const { PUBKEY } = require('../update-signature');
+const { RECOVERY: PUBKEY } = require('../update-signature'); // the passphrase key is the ed25519 recovery key
 
 (async () => {
   if (fs.existsSync(PROTECTED)) throw new Error(`${PROTECTED} already exists; nothing changed`);

@@ -8,7 +8,7 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 const { version } = require('../package.json');
 const { signed } = require('../update-signature');
-const { loadKey } = require('./release-key');
+const { loadKey, helloSign } = require('./release-key'); // Hello by default, --recovery for the ed25519 key
 
 const APP = 'LOUPE', REPO = 'loupedesk/loupe';
 // electron-builder writes "LOUPE Setup x.exe" locally and uploads it as "LOUPE-Setup-x.exe"; the .sig takes the uploaded name.
@@ -18,8 +18,9 @@ const tag = process.argv.includes('--upload') && `v${version}`;
 
 (async () => {
   const sha = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
-  const sig = crypto.sign(null, Buffer.from(`${APP} ${version} ${sha}\n`), await loadKey()).toString('base64');
-  if (!signed(APP, version, sha, sig)) throw new Error('this key does not match the public key in update-signature.js');
+  const text = `${APP} ${version} ${sha}\n`;
+  const sig = (process.argv.includes('--recovery') || process.env.RELEASE_RECOVERY === '1') ? crypto.sign(null, Buffer.from(text), await loadKey()).toString('base64') : helloSign(text);
+  if (!signed(APP, version, sha, sig)) throw new Error('this key does not match a public key in update-signature.js');
   fs.writeFileSync(out, sig + '\n');
   console.log(`signed ${path.basename(file)}`);
   if (tag) execFileSync('gh', ['release', 'upload', tag, out, '--clobber', '-R', REPO], { stdio: 'inherit' });

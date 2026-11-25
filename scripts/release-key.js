@@ -2,6 +2,7 @@
 // Which file: RELEASE_SIGNING_KEY (a path), else ~/.release-keys/updates-ed25519.enc.pem. Only a passphrase-protected key
 // is used: a plain one is refused (protect it with scripts/protect-key.js). The passphrase is asked in the terminal, without echo.
 const crypto = require('crypto');
+const { spawnSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -36,4 +37,12 @@ async function loadKey() {
   catch { throw new Error('wrong passphrase'); }
 }
 
-module.exports = { loadKey, ask, PLAIN, PROTECTED };
+// Everyday signing: Windows Hello signs with a key held in this PC's TPM (scripts/hello-sign.ps1). The prompt shows
+// on screen; the signature (base64) comes back on stdout. loadKey() above is the recovery key (--recovery).
+function helloSign(text) {
+  const r = spawnSync('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(__dirname, 'hello-sign.ps1'), 'sign'], { input: text, encoding: 'utf8', stdio: ['pipe', 'pipe', 'inherit'] });
+  if (r.status !== 0) throw new Error('Windows Hello did not sign (README, Release an update)');
+  return r.stdout.trim();
+}
+
+module.exports = { loadKey, helloSign, ask, PLAIN, PROTECTED };

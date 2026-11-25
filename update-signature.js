@@ -1,17 +1,26 @@
-// Updates install only if they carry a valid ed25519 signature from the release key.
+// Updates install only if they carry a valid signature from one of the release keys.
 // The checksum in latest.yml sits next to the installer, so whoever can upload one can upload the other. The private
-// half of this key lives only on Julian's PC and never touches the release host, so a stolen account can't sign.
+// halves of these keys live only on Julian's PC and never touches the release host, so a stolen account can't sign.
 // Signed text: "<app> <version> <sha256>\n", so an old signed installer can't be re-posted as a newer version.
 const crypto = require('crypto');
 const fs = require('fs');
 
-const PUBKEY = 'MCowBQYDK2VwAyEA8gcyEU9pjNP2Vp6fuBZe3IQmxU4Wdn8V2VxFNjuh0CQ=';
+// HELLO: the everyday key, RSA-2048 held by Windows Hello in the PC's TPM (can't be copied off it, a fingerprint or
+// PIN per signature). RECOVERY: the passphrase-locked ed25519 key, kept for when the Hello key is lost (README).
+const HELLO = 'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0dmGaWMVQXr9tv3WVxpRHWO9fpOsQz7jCVrJJk6/j2VmPAaNhwWr8ml+Q/C6J+OaanYafbo2xN2OcgLCCtjLl5Hjj9WGswcPClquHxMkE40XQ+dhMKV+ZGODa9e0Nrc3sagxonxfottRETPo2oMmW7aMZIA3Zs/0b/iI7u1dpI2/aTXgx7OE815n1lZ2rQ3JXeU+tGceI/S5LfEcENnyKbHe5ZG62u2iH6kqtqes1AMz1fhGzwtUv/n0k8uFoI37QRv0xDxf28oJVJI3qdXjDJM3IT+1k8272CYZpwNpIsPhOLnYR6LpbnihNtAh24I2olntZZSYJxT7DVhHOcR9twIDAQAB';
+const RECOVERY = 'MCowBQYDK2VwAyEA8gcyEU9pjNP2Vp6fuBZe3IQmxU4Wdn8V2VxFNjuh0CQ=';
+const KEYS = [HELLO, RECOVERY];
+// the algorithm comes from the trusted key, never from the .sig file
+const ALG = { ed25519: null, rsa: 'sha256' };
 
-function signed(app, v, sha, sig, key = PUBKEY) {
-  try {
-    const k = crypto.createPublicKey({ key: Buffer.from(key, 'base64'), format: 'der', type: 'spki' });
-    return crypto.verify(null, Buffer.from(`${app} ${v} ${sha}\n`), k, Buffer.from(String(sig).trim(), 'base64'));
-  } catch { return false; }
+function signed(app, v, sha, sig, keys = KEYS) {
+  const text = Buffer.from(`${app} ${v} ${sha}\n`), s = Buffer.from(String(sig).trim(), 'base64');
+  return [].concat(keys).some((key) => {
+    try {
+      const k = crypto.createPublicKey({ key: Buffer.from(key, 'base64'), format: 'der', type: 'spki' });
+      return k.asymmetricKeyType in ALG && crypto.verify(ALG[k.asymmetricKeyType], text, k, s);
+    } catch { return false; }
+  });
 }
 
 // electron-updater (NsisUpdater) awaits verifySignature(file) on every fresh download, before it emits
@@ -43,4 +52,4 @@ function guard(updater, { app, sigUrl, log = console.error, key, timeoutMs = 30e
   };
 }
 
-module.exports = { signed, guard, PUBKEY };
+module.exports = { signed, guard, HELLO, RECOVERY };
