@@ -4,6 +4,12 @@ One entry per release, in plain words. The version comes from package.json only.
 
 ## Unreleased
 
+## 0.3.4 (2026-11-25)
+
+- Uninstalling LOUPE now cleans up after itself: the start-with-Windows entry, its settings folder, `~/.loupe` and its own hooks in Claude Code's settings (backed up first, other hooks left alone).
+- Gives memory back sooner: a few seconds after every thread goes quiet, the island frees its cached memory instead of holding it for minutes.
+- Updated parts: thinking-orbs 0.3.2 and koffi 3.3.8.
+
 ## 0.3.3 (2026-11-25)
 
 - Status lines read in plain words: a row shows the step its thread is on (from the thread's own task list), or the last note Claude wrote, instead of "running cd" or a file name. Long lines are cut at a word.
