@@ -5,14 +5,14 @@
 <p align="center">Your Claude Code sessions, live, in one black island at the top of the screen.<br>Windows and Mac. Local only.</p>
 
 <p align="center">
-<a href="https://github.com/gigolajulian/loupe/releases/latest"><img src="https://img.shields.io/github/v/release/gigolajulian/loupe?label=release&color=5fc3d3" alt="Latest release"></a>
-<a href="https://github.com/gigolajulian/loupe/releases"><img src="https://img.shields.io/github/downloads/gigolajulian/loupe/total?color=5fc3d3" alt="Downloads"></a>
-<a href="LICENSE"><img src="https://img.shields.io/github/license/gigolajulian/loupe?color=5fc3d3" alt="MIT licence"></a>
+<a href="https://github.com/loupedesk/loupe/releases/latest"><img src="https://img.shields.io/github/v/release/loupedesk/loupe?label=release&color=5fc3d3" alt="Latest release"></a>
+<a href="https://github.com/loupedesk/loupe/releases"><img src="https://img.shields.io/github/downloads/loupedesk/loupe/total?color=5fc3d3" alt="Downloads"></a>
+<a href="LICENSE"><img src="https://img.shields.io/github/license/loupedesk/loupe?color=5fc3d3" alt="MIT licence"></a>
 </p>
 
 <p align="center"><img src="docs/tease.gif" width="800" alt="A session needs a permission: the island turns cyan, the card opens, Allow is clicked and the session carries on"></p>
 
-**Install:** paste the [prompt for your computer](#install-or-upgrade-with-claude) into Claude Code, or download the [latest Windows installer](https://github.com/gigolajulian/loupe/releases/latest). The installer is unsigned, so SmartScreen shows "More info", then "Run anyway".
+**Install:** paste the [prompt for your computer](#install-or-upgrade-with-claude) into Claude Code, or download the [latest Windows installer](https://github.com/loupedesk/loupe/releases/latest). The installer is unsigned, so SmartScreen shows "More info", then "Run anyway".
 
 Free and MIT licensed. If LOUPE helps you, a star helps other people find it.
 
@@ -57,11 +57,11 @@ Paste the prompt for your computer into Claude Code (the Claude app's Code tab o
 ### Windows
 
 ```
-Install or upgrade LOUPE on this Windows PC. LOUPE is a small always-on-top island that mirrors my Claude Code sessions. Repo and releases: https://github.com/gigolajulian/loupe. Use PowerShell. Ask me before anything hard to undo, never delete my files, and use no em dashes in anything you write.
+Install or upgrade LOUPE on this Windows PC. LOUPE is a small always-on-top island that mirrors my Claude Code sessions. Repo and releases: https://github.com/loupedesk/loupe. Use PowerShell. Ask me before anything hard to undo, never delete my files, and use no em dashes in anything you write.
 
 1. Node: run `node -v` (needs 18 or newer, the hooks run node). If it is missing, ask me before running `winget install OpenJS.NodeJS.LTS`.
 2. What is there now: if `$env:LOCALAPPDATA\Programs\LOUPE\LOUPE.exe` exists, note its version with `(Get-Item <path>).VersionInfo.ProductVersion`. Note every hook command in `~/.claude/settings.json` that mentions relay.js, loupe or coucou. If the installed version already matches the latest release, skip to step 5.
-3. Download the latest installer into a new empty folder: `$d = New-Item -ItemType Directory -Force "$env:TEMP\loupe-install"`. Get the asset URL from `Invoke-RestMethod https://api.github.com/repos/gigolajulian/loupe/releases/latest` (the asset named `LOUPE-Setup-<version>.exe`), download it with `Invoke-WebRequest -OutFile`, then `Unblock-File` it.
+3. Download the latest installer into a new empty folder: `$d = New-Item -ItemType Directory -Force "$env:TEMP\loupe-install"`. Get the asset URL from `Invoke-RestMethod https://api.github.com/repos/loupedesk/loupe/releases/latest` (the asset named `LOUPE-Setup-<version>.exe`), download it with `Invoke-WebRequest -OutFile`, then `Unblock-File` it.
 4. Install. This upgrades an older LOUPE in place and keeps its settings: `Stop-Process -Name LOUPE -ErrorAction SilentlyContinue`, then `Start-Process -Wait <installer> -ArgumentList '/S'`. It installs per user (no admin) to `%LOCALAPPDATA%\Programs\LOUPE` and starts LOUPE. If LOUPE is not running 5 seconds later, start `LOUPE.exe`.
 5. Hooks: run `& "$env:LOCALAPPDATA\Programs\LOUPE\LOUPE.exe" --check-hooks`. If the dialog says the hooks need a look, tell me to click "Fix hooks" in it myself (Claude Code's safety check won't let you edit its own settings), and wait for me. LOUPE backs up `~/.claude/settings.json` to `settings.json.bak-loupe-<time>`, removes old LOUPE hooks (any old relay.js path) and Coucou hooks, and adds the 10 LOUPE hooks pointing at `~/.loupe/relay.js`, which LOUPE rewrites on every launch. Other hooks stay. The next dialog says "Claude Code hooks are set". Show me the hook part of the diff against the backup. Leave any old relay.js file on disk where it is.
 6. Test: `'{"hook_event_name":"UserPromptSubmit","session_id":"loupe-test","cwd":"C:/LOUPE TEST"}' | node "$HOME/.loupe/relay.js"` makes "LOUPE TEST" show "thinking" at the top centre of the main display. It clears itself after 10 seconds.
@@ -71,11 +71,11 @@ Install or upgrade LOUPE on this Windows PC. LOUPE is a small always-on-top isla
 ### Mac
 
 ```
-Install or upgrade LOUPE on this Mac. LOUPE is a small island in the notch that mirrors my Claude Code sessions. Repo: https://github.com/gigolajulian/loupe. Ask me before anything hard to undo, never delete my files, and use no em dashes in anything you write.
+Install or upgrade LOUPE on this Mac. LOUPE is a small island in the notch that mirrors my Claude Code sessions. Repo: https://github.com/loupedesk/loupe. Ask me before anything hard to undo, never delete my files, and use no em dashes in anything you write.
 
 1. Check `node -v` (18 or newer) and `git --version`. If Node is missing, ask me before `brew install node`.
 2. What is there now: if /Applications/LOUPE.app exists, note its version (`defaults read /Applications/LOUPE.app/Contents/Info CFBundleShortVersionString`). Note every hook command in ~/.claude/settings.json that mentions relay.js, loupe or coucou.
-3. Source: clone https://github.com/gigolajulian/loupe to ~/LOUPE-src, or `git -C ~/LOUPE-src pull` if it is already there. Then run `npm install` and `npx electron-builder --mac` in it. The build is unsigned on purpose, so a signing skip warning is fine.
+3. Source: clone https://github.com/loupedesk/loupe to ~/LOUPE-src, or `git -C ~/LOUPE-src pull` if it is already there. Then run `npm install` and `npx electron-builder --mac` in it. The build is unsigned on purpose, so a signing skip warning is fine.
 4. Install: `pkill -x LOUPE`, then copy the app for this Mac (`uname -m`: arm64 is dist/mac-arm64/LOUPE.app, x86_64 is dist/mac/LOUPE.app) over /Applications/LOUPE.app with `ditto`. Settings live in ~/Library/Application Support/LOUPE and stay. Ad-hoc sign it: `codesign --force --deep --sign - /Applications/LOUPE.app`, clear quarantine: `xattr -dr com.apple.quarantine /Applications/LOUPE.app`, then `open /Applications/LOUPE.app`. No Dock icon is expected.
 5. Hooks: `/Applications/LOUPE.app/Contents/MacOS/LOUPE --check-hooks`. If the dialog says the hooks need a look, tell me to click "Fix hooks" in it myself (Claude Code's safety check won't let you edit its own settings), and wait for me. It backs up ~/.claude/settings.json, swaps old LOUPE and Coucou hooks for the 10 LOUPE hooks at ~/.loupe/relay.js, and leaves other hooks alone. Show me the hook part of the diff against the backup. If the dialog says node is not found, find it with `command -v node` and ask me before putting that absolute path in the hook commands.
 6. Test: `echo '{"hook_event_name":"UserPromptSubmit","session_id":"loupe-test","cwd":"/tmp/LOUPE TEST"}' | node ~/.loupe/relay.js` grows the notch with "LOUPE TEST thinking". Take a screenshot of the top of the screen and show me. It clears itself after 10 seconds.
@@ -84,7 +84,7 @@ Install or upgrade LOUPE on this Mac. LOUPE is a small island in the notch that 
 
 ### By hand (Windows)
 
-1. Download `LOUPE-Setup-<version>.exe` from [the latest release](https://github.com/gigolajulian/loupe/releases/latest) and run it. It is unsigned: SmartScreen shows "More info", then "Run anyway".
+1. Download `LOUPE-Setup-<version>.exe` from [the latest release](https://github.com/loupedesk/loupe/releases/latest) and run it. It is unsigned: SmartScreen shows "More info", then "Run anyway".
 2. Tray icon (three dots), then "Check Claude Code hooks", then "Fix hooks".
 
 ## Updates
@@ -172,7 +172,7 @@ Claude sessions can leave dev servers, log tails and watchers running after you 
    GH_TOKEN="$(gh auth token)" npm run release
    ```
    This builds, uploads the installer, its `.blockmap` and `latest.yml` to a draft release (`releaseType: draft` in package.json), signs the installer and uploads `LOUPE-Setup-<version>.exe.sig`, and only then makes the release public (`scripts/publish-release.js`). Installs refuse an update without the `.sig`, so nothing is public until it is there. If a step fails, the draft stays hidden: fix it, then run `node scripts/sign-release.js --upload` and `node scripts/publish-release.js`. The key is `~/.release-keys/updates-ed25519.enc.pem` on Julian's PC, protected by a passphrase the release asks for in the terminal (or the file `RELEASE_SIGNING_KEY` points to; the plain `updates-ed25519.pem` is used only while no protected copy exists). `node scripts/protect-key.js` makes the protected copy once. It never goes in a repo. If it is lost, installed copies can't update again, so keep a backup.
-4. Check https://github.com/gigolajulian/loupe/releases/latest lists `latest.yml`. Running installs pick it up within 4 hours, or now with tray "Check for updates", and ask before they restart to install. GitHub's release feed can lag a minute or two after publishing.
+4. Check https://github.com/loupedesk/loupe/releases/latest lists `latest.yml`. Running installs pick it up within 4 hours, or now with tray "Check for updates", and ask before they restart to install. GitHub's release feed can lag a minute or two after publishing.
 
 Mac: GitHub builds the zips and adds them to the release when it goes public (`.github/workflows/mac-release.yml`). Mac installs only get a "LOUPE x is out" dialog, since unsigned apps can't update in place.
 

@@ -519,13 +519,13 @@ app.whenReady().then(() => {
     const w = lvl => m => fs.appendFile(ulog, `${new Date().toISOString()} ${lvl} ${m}\n`, () => {});
     autoUpdater.logger = { info: w('info'), warn: w('warn'), error: w('error'), debug() {} };
     require('./update-signature').guard(autoUpdater, { app: 'LOUPE', log: autoUpdater.logger.warn,
-      sigUrl: v => `https://github.com/gigolajulian/loupe/releases/download/v${v}/LOUPE-Setup-${v}.exe.sig` });
+      sigUrl: v => `https://github.com/loupedesk/loupe/releases/download/v${v}/LOUPE-Setup-${v}.exe.sig` });
     autoUpdater.on('update-available', i => {
       if (!MAC) return manual && say(`Downloading LOUPE ${i.version}`, 'LOUPE asks before it installs.');
       if (!manual && told === i.version) return;
       told = i.version;
       dialog.showMessageBox({ title: 'LOUPE', message: `LOUPE ${i.version} is out`, buttons: ['Download', 'Later'], noLink: true })
-        .then(({ response }) => response === 0 && shell.openExternal('https://github.com/gigolajulian/loupe/releases/latest')); // the packaged package.json has no build.publish
+        .then(({ response }) => response === 0 && shell.openExternal('https://github.com/loupedesk/loupe/releases/latest')); // the packaged package.json has no build.publish
     });
     autoUpdater.on('update-not-available', () => manual && say(`LOUPE ${app.getVersion()} is up to date`));
     // every check re-emits this for a download already on disk: ask at most once a day per version, unless asked
