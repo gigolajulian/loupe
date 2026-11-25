@@ -35,6 +35,7 @@ One line each, checked on every mock and build:
 - Keyboard and screen readers reach every prompt through the Claude thread, not the island (accepted risk until 2027-11-23, BASELINE A11Y-1 to 7). A change that makes the island take focus revisits it.
 - Tap targets at least 44 px; text contrast at least 4.5:1 on an open tile over a white desktop (`node scripts/checks.js UX-2`).
 - No em dashes in any copy.
+- Status lines are plain words: the thread's task-list step, else Claude's last note, else a plain noun ("editing code"). Never a command or file name; cut at a word (`node sessions.js`). The pill stays on one thread, rows keep their place, text changes fade (2026-11-25).
 - Check Windows and the Mac notch.
 - Kill and other destructive buttons use `--danger`, never cyan; each kill asks once in place (no dialog).
 - Processes rows are one line (28 to 32 px, mouse only, Julian asked for a compact panel 2026-11-21); keep lists to one line per item and open details on click.
