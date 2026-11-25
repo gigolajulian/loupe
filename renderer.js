@@ -63,7 +63,7 @@ const reduce = matchMedia('(prefers-reduced-motion: reduce)');
 function say(el, t) {
   if (el.textContent === t) return;
   el.textContent = t;
-  if (!reduce.matches) el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 320, easing: 'ease-out' });
+  if (!reduce.matches && getComputedStyle(el).opacity !== '0') el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 320, easing: 'ease-out' });
 }
 // #5 #6 #11: a new mode morphs in over BLEND and holds at least HOLD, so quick tool hops read as one movement.
 // Waking from idle, the mark unfolds and the speed eases up from rest over EASE_IN. Needs-you pulses at WAIT speed.
@@ -200,10 +200,10 @@ function sync(list) {
 const dismissed = new Set();
 const askKey = s => s.ask.req || `${s.id}:${s.ask.at}`;
 
-// the pill stays on one thread while it works, so it doesn't flip between threads on every call; needs-you still wins
+// the pill stays on one thread while it works, so it doesn't flip between threads on every call; needs-you and stopped still win
 let pinned = null;
 function top(list) {
-  const s = list.find(x => x.state === 'need') || list.find(x => x.id === pinned && active(x)) || list[0];
+  const s = list.find(x => x.state === 'need' || x.state === 'err') || list.find(x => x.id === pinned && active(x)) || list[0];
   pinned = s ? s.id : null;
   return s;
 }
