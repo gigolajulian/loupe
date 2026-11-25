@@ -23,7 +23,8 @@ Questions and permissions show in the Claude Code thread and LOUPE mirrors them.
 
 ## In action
 
-<p align="center"><img src="docs/in-action-panel.jpg" width="820" alt="LOUPE open over the Claude app: four projects, each with what it is doing"></p>
+<p align="center"><img src="docs/in-action-pill.jpg" width="820" alt="The LOUPE pill at the top of a full screen, showing one thread and the step it is on"></p>
+<p align="center"><img src="docs/in-action-panel.jpg" width="820" alt="LOUPE open over the Claude app: seven threads, each with what it is doing"></p>
 <p align="center"><img src="docs/in-action-question.jpg" width="820" alt="A question from Claude Code answered on LOUPE, over the Claude app"></p>
 
 ## How it works
@@ -34,17 +35,17 @@ Questions and permissions show in the Claude Code thread and LOUPE mirrors them.
 Claude Code hook  >  relay.js  >  local pipe  >  LOUPE island
 ```
 
-Every hook event runs `relay.js`. The relay hands it to LOUPE over a named pipe (a Unix socket on the Mac) and exits. LOUPE keeps one row per project and draws the most urgent session in the orb.
+Every hook event runs `relay.js`. The relay hands it to LOUPE over a named pipe (a Unix socket on the Mac) and exits. LOUPE keeps one row per thread and draws the most urgent one in the orb.
 
 | Idle | Thinking | Working |
 |:-:|:-:|:-:|
-| <img src="docs/state-idle.png" width="260" alt="Idle: the LOUPE mark and how long ago"> | <img src="docs/state-thinking.png" width="260" alt="Thinking: a breathing ring of dots"> | <img src="docs/state-working.png" width="260" alt="Working: the orb and the file being edited"> |
-| The orb folds into the mark. | A prompt went in. | What it reads, edits or runs. |
+| <img src="docs/state-idle.png" width="260" alt="Idle: the LOUPE mark and how long ago"> | <img src="docs/state-thinking.png" width="260" alt="Thinking: a breathing ring of dots"> | <img src="docs/state-working.png" width="260" alt="Working: the orb and the step it is on"> |
+| The orb folds into the mark. | A prompt went in. | The step it is on, in plain words. |
 
 | Open | Needs you |
 |:-:|:-:|
-| <img src="docs/state-open.png" width="400" alt="Open panel: every live project with its steps"> | <img src="docs/state-needs-you.png" width="400" alt="Needs you: the row turns cyan and the panel opens"> |
-| Hover the island. Steps of one project share a row. | Cyan, a sound, and the panel opens by itself. |
+| <img src="docs/state-open.png" width="400" alt="Open panel: every live thread and what it is doing"> | <img src="docs/state-needs-you.png" width="400" alt="Needs you: the row turns cyan and the panel opens"> |
+| Hover the island. One row per live thread. | Cyan, a sound, and the panel opens by itself. |
 | **Question** | **Permission** |
 | <img src="docs/state-question.png" width="400" alt="Question card with numbered options and Submit"> | <img src="docs/state-permission.png" width="400" alt="Permission card with the command, Allow, Deny and Always"> |
 | Mirrored from the thread, or picked and submitted here if you turn that on. | Mirrored from the thread, or answered here if you turn that on. |
