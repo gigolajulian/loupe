@@ -8,6 +8,7 @@
 <a href="https://github.com/loupedesk/loupe/releases/latest"><img src="https://img.shields.io/github/v/release/loupedesk/loupe?label=release&color=5fc3d3" alt="Latest release"></a>
 <a href="https://github.com/loupedesk/loupe/releases"><img src="https://img.shields.io/github/downloads/loupedesk/loupe/total?color=5fc3d3" alt="Downloads"></a>
 <a href="LICENSE"><img src="https://img.shields.io/github/license/loupedesk/loupe?color=5fc3d3" alt="MIT licence"></a>
+<a href="https://x.com/loupedesk"><img src="https://img.shields.io/badge/X-%40loupedesk-5fc3d3" alt="LOUPE on X: @loupedesk"></a>
 </p>
 
 <p align="center"><img src="docs/tease.gif" width="800" alt="A session needs a permission: the island turns cyan, the card opens, Allow is clicked and the session carries on"></p>
