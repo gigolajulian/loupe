@@ -4,6 +4,8 @@ One entry per release, in plain words. The version comes from package.json only.
 
 ## Unreleased
 
+## 0.3.3 (2026-11-25)
+
 - Status lines read in plain words: a row shows the step its thread is on (from the thread's own task list), or the last note Claude wrote, instead of "running cd" or a file name. Long lines are cut at a word.
 - Calmer island: new text fades in, the pill stays on one thread instead of flipping between them, the orb keeps one look while a thread works, and rows in the open panel keep their place.
 - Safer and steadier under the hood: a stray answer can never approve a permission, settings can't be half-written by a crash, logs and backups stay small, and errors go to a local log.
