@@ -12,7 +12,28 @@ on:
 permissions:
   contents: read
 jobs:
+  # pull requests: build only, with a read-only token
   build:
+    if: github.event_name == 'pull_request'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: sh mac/build.sh
+      # unsigned on purpose (README): no certificate, never publish from here
+      - run: npx electron-builder --mac --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - run: ls -la dist/*.zip
+  # releases: the same build, plus the one step that needs to write
+  release:
+    if: github.event_name == 'release'
     runs-on: macos-latest
     permissions:
       contents: write # attach the zips to the release
@@ -31,8 +52,7 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
       - run: ls -la dist/*.zip
-      - if: github.event_name == 'release'
-        run: gh release upload "$TAG" dist/*.zip --clobber --repo "$GITHUB_REPOSITORY"
+      - run: gh release upload "$TAG" dist/*.zip --clobber --repo "$GITHUB_REPOSITORY"
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.release.tag_name }}
