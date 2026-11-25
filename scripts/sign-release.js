@@ -10,7 +10,7 @@ const { version } = require('../package.json');
 const { signed } = require('../update-signature');
 const { loadKey, helloSign } = require('./release-key'); // Hello by default, --recovery for the ed25519 key
 
-const APP = 'LOUPE', REPO = 'gigolajulian/loupe';
+const APP = 'LOUPE', REPO = 'loupedesk/loupe';
 // electron-builder writes "LOUPE Setup x.exe" locally and uploads it as "LOUPE-Setup-x.exe"; the .sig takes the uploaded name.
 const file = path.join(__dirname, '..', 'dist', `LOUPE Setup ${version}.exe`);
 const out = path.join(__dirname, '..', 'dist', `LOUPE-Setup-${version}.exe.sig`);

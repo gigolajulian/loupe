@@ -259,7 +259,7 @@ if (require.main === module) {
   assert.equal(tool('mcp__mail__search', {}), 'working');
   assert.equal(tool('Bash', { command: 'x', description: 7 }), 'running a command'); // a note that is not text is ignored
   assert.equal(cut('probe renderer heap and DOM nodes', 25), 'probe renderer heap and…');
-  assert.equal(cut('scan all gigolajulian repos', 25), 'scan all gigolajulian…');
+  assert.equal(cut('scan every repo for self-updaters', 25), 'scan every repo for…');
   assert.equal(cut('exactly twenty-five chars', 25), 'exactly twenty-five chars');
   assert.equal(cut('supercalifragilisticexpialidocious words', 12), 'supercalifr…'); // one long word: no space to cut at
   assert.equal(cut('one, two, three', 10), 'one, two…');
