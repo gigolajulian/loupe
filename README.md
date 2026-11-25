@@ -4,7 +4,18 @@
 
 <p align="center">Your Claude Code sessions, live, in one black island at the top of the screen.<br>Windows and Mac. Local only.</p>
 
-<p align="center"><img src="docs/loupe.gif" width="720" alt="The island moving through idle, thinking, working, the open list, needs you, a question and a permission"></p>
+<p align="center">
+<a href="https://github.com/gigolajulian/loupe/releases/latest"><img src="https://img.shields.io/github/v/release/gigolajulian/loupe?label=release&color=5fc3d3" alt="Latest release"></a>
+<a href="https://github.com/gigolajulian/loupe/releases"><img src="https://img.shields.io/github/downloads/gigolajulian/loupe/total?color=5fc3d3" alt="Downloads"></a>
+<a href="LICENSE"><img src="https://img.shields.io/github/license/gigolajulian/loupe?color=5fc3d3" alt="MIT licence"></a>
+</p>
+
+<p align="center"><img src="docs/tease.gif" width="800" alt="A session needs a permission: the island turns cyan, the card opens, Allow is clicked and the session carries on"></p>
+
+**Install:** paste the [prompt for your computer](#install-or-upgrade-with-claude) into Claude Code, or download the [latest Windows installer](https://github.com/gigolajulian/loupe/releases/latest). The installer is unsigned, so SmartScreen shows "More info", then "Run anyway".
+
+Free and MIT licensed. If LOUPE helps you, a star helps other people find it.
+
 
 A black island at the top of the main display that shows your live Claude Code sessions: what each one is doing, and a mirror of every permission and question. Click a project to open it in the Claude app. On a Mac it sits in the notch.
 
@@ -16,6 +27,8 @@ Questions and permissions show in the Claude Code thread and LOUPE mirrors them.
 <p align="center"><img src="docs/in-action-question.jpg" width="820" alt="A question from Claude Code answered on LOUPE, over the Claude app"></p>
 
 ## How it works
+
+<p align="center"><img src="docs/loupe.gif" width="720" alt="The island moving through idle, thinking, working, the open list, needs you, a question and a permission"></p>
 
 ```
 Claude Code hook  >  relay.js  >  local pipe  >  LOUPE island
