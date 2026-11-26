@@ -30,7 +30,7 @@ jobs:
       - run: npx electron-builder --mac --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-      - run: ls -la dist/*.zip
+      - run: ls -la dist/*.zip dist/*.zip.blockmap dist/latest-mac.yml
   # releases: the same build, plus the one step that needs to write
   release:
     if: github.event_name == 'release'
@@ -51,8 +51,9 @@ jobs:
       - run: npx electron-builder --mac --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-      - run: ls -la dist/*.zip
-      - run: gh release upload "$TAG" dist/*.zip --clobber --repo "$GITHUB_REPOSITORY"
+      # latest-mac.yml is what the Mac update check reads; without it Macs never hear about a release
+      - run: ls -la dist/*.zip dist/*.zip.blockmap dist/latest-mac.yml
+      - run: gh release upload "$TAG" dist/*.zip dist/*.zip.blockmap dist/latest-mac.yml --clobber --repo "$GITHUB_REPOSITORY"
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.release.tag_name }}
