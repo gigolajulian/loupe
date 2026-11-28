@@ -1,12 +1,12 @@
 // Hush add-on (Windows): LOUPE runs Hush (loupedesk/hush) as `Hush.exe --headless`, so one tray icon covers both.
-// LOUPE fetches the release exe, checks its .sig against the ed25519 release key (Hush trusts only that one), and
+// LOUPE fetches the release exe, checks its .sig against the release keys (Windows Hello, or the ed25519 recovery key), and
 // talks to it over stdio: JSON status lines out, commands in. Hush holds a per-login lock, so when the standalone
 // Hush app is running the sidecar exits with code 3 and LOUPE leaves it be (Discord is never muted twice).
 const { spawn } = require('child_process');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const { signed, RECOVERY } = require('./update-signature');
+const { signed, HELLO, RECOVERY } = require('./update-signature');
 
 const API = 'https://api.github.com/repos/loupedesk/hush/releases/latest';
 const DAY = 24 * 3600e3, RETRY = 60e3;
@@ -26,7 +26,7 @@ async function latest(get) {
 }
 
 // download rel's exe to `to` only if its signature checks out
-async function fetchSigned(rel, to, get, key = RECOVERY) {
+async function fetchSigned(rel, to, get, key = [HELLO, RECOVERY]) {
   const data = await get(rel.exe), sig = String(await get(rel.sig));
   const sha = crypto.createHash('sha256').update(data).digest('hex');
   if (!signed('Hush', rel.v, sha, sig, key)) throw new Error(`Hush ${rel.v} is not signed`);
