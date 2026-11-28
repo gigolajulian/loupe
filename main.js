@@ -501,7 +501,7 @@ app.whenReady().then(() => {
   if (app.isPackaged && !cfg.loginSet) {
     dialog.showMessageBox({ title: 'LOUPE', noLink: true, defaultId: 0, cancelId: 1,
       message: MAC ? 'Open LOUPE when you log in?' : 'Start LOUPE with Windows?',
-      detail: `You can change this later in the tray (${MAC ? 'Open at Login' : 'Start with Windows'}).`,
+      detail: `You can change this later in the tray (Settings > ${MAC ? 'Open at Login' : 'Start with Windows'}).`,
       buttons: [MAC ? 'Open at Login' : 'Start with Windows', 'Not now'],
     }).then(({ response }) => {
       app.setLoginItemSettings({ openAtLogin: response === 0 });
@@ -593,24 +593,26 @@ app.whenReady().then(() => {
     powerMonitor.on('unlock-screen', () => reload('unlock'));
   }
   const HUSH_SAYS = ['connected to Discord', 'muting Discord', 'Discord not running', 'paused', 'starting']; // else Hush's raw error text
-  // the Hush rows: one checkbox, then a line or submenu for its state (hush.js)
+  // Hush (hush.js): one row. Off, a checkbox; on, its live status with everything else inside
   const hushRows = () => {
     if (!hush) return [];
-    const h = hush.state(), on = !!cfg.hush, dim = label => ({ label, enabled: false });
-    const rows = [{ label: on ? 'Hush: mute Discord while you dictate' : 'Add Hush: mute Discord while you dictate', type: 'checkbox', checked: on,
-      click: () => { cfg.hush = !on; saveCfg(); (on ? hush.disable() : hush.enable()); menu(); } }];
-    if (on && h.phase === 'installing') rows.push(dim('Hush: installing'));
-    if (on && h.phase === 'standalone') rows.push(dim('Hush: your Hush app is running it'), dim('Settings are in its own tray icon'));
-    if (on && h.phase === 'failed') rows.push(dim(h.note), ...(h.version ? [] : [{ label: 'Try again', click: () => hush.enable() }]));
-    if (on && h.phase === 'running' && h.keys === false) rows.push(dim('Hush needs your Discord app keys'), { label: 'Set up Discord keys…', click: hushKeys });
-    else if (on && h.phase === 'running') rows.push(...(h.note ? [dim(h.note)] : []), { label: `Hush: ${HUSH_SAYS.includes(h.status) ? h.status : 'cannot reach Discord'}`, submenu: [
+    const h = hush.state(), dim = label => ({ label, enabled: false });
+    if (!cfg.hush) return [{ label: 'Add Hush: mute Discord while you dictate', type: 'checkbox', checked: false,
+      click: () => { cfg.hush = true; saveCfg(); hush.enable(); menu(); } }];
+    const off = [{ type: 'separator' }, { label: 'Turn off Hush', click: () => { cfg.hush = false; saveCfg(); hush.disable(); menu(); } }];
+    const row = (label, items) => [{ label: `Hush: ${label}`, submenu: [...items, ...off] }];
+    if (h.phase === 'installing' || h.phase === 'off') return row(h.phase === 'off' ? 'starting' : 'installing', []);
+    if (h.phase === 'standalone') return row('your Hush app runs it', [dim('Its settings are in its own tray icon')]);
+    if (h.phase === 'failed') return row(h.version ? 'starting again' : 'could not be installed',
+      [...(h.note ? [dim(h.note)] : []), ...(h.version ? [] : [{ label: 'Try again', click: () => hush.enable() }])]);
+    if (h.keys === false) return row('needs Discord keys', [{ label: 'Set up Discord keys…', click: hushKeys }]);
+    return row(HUSH_SAYS.includes(h.status) ? h.status : 'cannot reach Discord', [
+      ...(h.note ? [dim(h.note)] : []),
       { label: 'Pause', type: 'checkbox', checked: !!h.paused, click: () => hush.send(h.paused ? 'resume' : 'pause') },
       { label: 'Quiet mute (no Discord sound)', type: 'checkbox', checked: !!h.quiet, click: () => hush.send(h.quiet ? 'quiet off' : 'quiet on') },
       { type: 'separator' },
-      dim(`Hush ${h.version}`), dim('Starts with LOUPE'),
-      { label: 'Check for Hush updates', click: () => hush.update(true) },
-    ] });
-    return [...rows, { type: 'separator' }];
+      { label: `Check for updates (${h.version || '?'})`, click: () => hush.update(true) },
+    ]);
   };
   let sentLink = null;
   menu = () => {
@@ -626,35 +628,38 @@ app.whenReady().then(() => {
     { label: 'Link details', click: () => hookCheck() },
     { type: 'separator' },
     ...hushRows(),
-    ...(MAC ? [] : [{ label: 'Where', submenu: [['top', 'Top of main screen'], ['above', 'Bottom of the screen above']].map(([v, label]) => ({
-      label, type: 'radio', checked: (cfg.where || 'top') === v,
-      click: () => { cfg.where = v; saveCfg(); sendCfg(); menu(); },
-    })) }]),
-    { label: 'Glass', submenu: [['clear', 'Clear'], ['dark', 'Dark'], ['solid', 'Solid']].map(([v, label]) => ({
-      label, type: 'radio', checked: (cfg.glass || 'dark') === v, click: () => { cfg.glass = v; saveCfg(); sendCfg(); menu(); },
-    })) },
-    ...(MAC ? [] : [{ label: 'Size', submenu: [['small', 'Small'], ['normal', 'Normal']].map(([v, label]) => ({
-      label, type: 'radio', checked: (cfg.size || 'normal') === v, click: () => { cfg.size = v; saveCfg(); sendCfg(); menu(); },
-    })) }]),
-    ...(MAC ? [] : [{ label: 'Reset position', enabled: !!cfg.dx, click: () => { cfg.dx = 0; saveCfg(); place(); menu(); } }]),
-    { label: 'Close after hover', submenu: [0, 150, 300, 600, 1000, 2000, 5000].map(ms => ({
-      label: ms ? `${ms / 1000} s` : 'Instant', type: 'radio', checked: cfg.closeDelay === ms,
-      click: () => { cfg.closeDelay = ms; saveCfg(); sendCfg(); menu(); },
-    })) },
-    { label: 'Gooey motion', type: 'checkbox', checked: cfg.goo,
-      click: () => { cfg.goo = !cfg.goo; saveCfg(); sendCfg(); menu(); } },
-    ...(MAC ? [] : [{ label: 'Processes (leftovers from sessions)', type: 'checkbox', checked: !!cfg.procs,
-      click: () => { cfg.procs = !cfg.procs; cfg.procsAsked = true; saveCfg(); sendCfg(); menu(); procsTick(true); } }]),
-    { label: 'Sounds', type: 'checkbox', checked: cfg.sound,
-      click: () => { cfg.sound = !cfg.sound; saveCfg(); sendCfg(); menu(); } },
-    // relay.js reads these: on, they wait for the island and stay out of the thread until answered or Claude comes to front
-    { label: 'Answer questions on LOUPE (hides them from the thread until answered)', type: 'checkbox', checked: !!cfg.answerQuestions,
-      click: () => { cfg.answerQuestions = !cfg.answerQuestions; saveCfg(); menu(); } },
-    { label: 'Answer permissions on LOUPE (hides them from the thread until answered)', type: 'checkbox', checked: !!cfg.answerOnIsland,
-      click: () => { cfg.answerOnIsland = !cfg.answerOnIsland; saveCfg(); menu(); } },
-    // installed app only: in dev this would register electron.exe itself
-    ...(app.isPackaged ? [{ label: MAC ? 'Open at Login' : 'Start with Windows', type: 'checkbox', checked: app.getLoginItemSettings().openAtLogin,
-      click: item => { app.setLoginItemSettings({ openAtLogin: item.checked }); menu(); } }] : []),
+    // LOUPE's own settings, folded under one row so the menu stays short
+    { label: 'Settings', submenu: [
+      ...(MAC ? [] : [{ label: 'Where', submenu: [['top', 'Top of main screen'], ['above', 'Bottom of the screen above']].map(([v, label]) => ({
+        label, type: 'radio', checked: (cfg.where || 'top') === v,
+        click: () => { cfg.where = v; saveCfg(); sendCfg(); menu(); },
+      })) }]),
+      { label: 'Glass', submenu: [['clear', 'Clear'], ['dark', 'Dark'], ['solid', 'Solid']].map(([v, label]) => ({
+        label, type: 'radio', checked: (cfg.glass || 'dark') === v, click: () => { cfg.glass = v; saveCfg(); sendCfg(); menu(); },
+      })) },
+      ...(MAC ? [] : [{ label: 'Size', submenu: [['small', 'Small'], ['normal', 'Normal']].map(([v, label]) => ({
+        label, type: 'radio', checked: (cfg.size || 'normal') === v, click: () => { cfg.size = v; saveCfg(); sendCfg(); menu(); },
+      })) }]),
+      ...(MAC ? [] : [{ label: 'Reset position', enabled: !!cfg.dx, click: () => { cfg.dx = 0; saveCfg(); place(); menu(); } }]),
+      { label: 'Close after hover', submenu: [0, 150, 300, 600, 1000, 2000, 5000].map(ms => ({
+        label: ms ? `${ms / 1000} s` : 'Instant', type: 'radio', checked: cfg.closeDelay === ms,
+        click: () => { cfg.closeDelay = ms; saveCfg(); sendCfg(); menu(); },
+      })) },
+      { label: 'Gooey motion', type: 'checkbox', checked: cfg.goo,
+        click: () => { cfg.goo = !cfg.goo; saveCfg(); sendCfg(); menu(); } },
+      ...(MAC ? [] : [{ label: 'Processes (leftovers from sessions)', type: 'checkbox', checked: !!cfg.procs,
+        click: () => { cfg.procs = !cfg.procs; cfg.procsAsked = true; saveCfg(); sendCfg(); menu(); procsTick(true); } }]),
+      { label: 'Sounds', type: 'checkbox', checked: cfg.sound,
+        click: () => { cfg.sound = !cfg.sound; saveCfg(); sendCfg(); menu(); } },
+      // relay.js reads these: on, they wait for the island and stay out of the thread until answered or Claude comes to front
+      { label: 'Answer questions on LOUPE (hides them from the thread until answered)', type: 'checkbox', checked: !!cfg.answerQuestions,
+        click: () => { cfg.answerQuestions = !cfg.answerQuestions; saveCfg(); menu(); } },
+      { label: 'Answer permissions on LOUPE (hides them from the thread until answered)', type: 'checkbox', checked: !!cfg.answerOnIsland,
+        click: () => { cfg.answerOnIsland = !cfg.answerOnIsland; saveCfg(); menu(); } },
+      // installed app only: in dev this would register electron.exe itself
+      ...(app.isPackaged ? [{ label: MAC ? 'Open at Login' : 'Start with Windows', type: 'checkbox', checked: app.getLoginItemSettings().openAtLogin,
+        click: item => { app.setLoginItemSettings({ openAtLogin: item.checked }); menu(); } }] : []),
+    ] },
     { type: 'separator' },
     ...(MAC && axTrusted === false ? [{ label: 'Allow Accessibility for the menu bar slide…', click: () => {
       shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility');

@@ -6,6 +6,7 @@ One entry per release, in plain words. The version comes from package.json only.
 
 - Windows: LOUPE can run Hush for you, so Discord mutes while you dictate with no second tray icon. Tick "Add Hush" in the tray. LOUPE downloads the signed Hush release, checks its signature, and shows Hush's status, Pause and Quiet mute in its own menu. Hush starts and stops with LOUPE and updates the same way LOUPE does.
 - If the Hush app is already running, LOUPE leaves it in charge, so Discord is never muted twice.
+- The tray menu is shorter: LOUPE's own settings (Where, Glass, Size, Sounds, Start with Windows and the rest) sit under one Settings row, and Hush is one row with its controls inside.
 - First run: "Set up Discord keys" opens one small window for the two values Hush needs from your own Discord app.
 
 ## 0.3.6 (2026-11-28)
