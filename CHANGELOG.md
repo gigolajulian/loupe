@@ -2,8 +2,11 @@
 
 One entry per release, in plain words. The version comes from package.json only.
 
-## Unreleased
+## 0.3.6 (2026-11-28)
 
+- You can see whether Claude Code is linked: the tray's first line says "Linked" with the time and session of the last event, "waiting for a session", or what is wrong. Not linked, the island stays visible and offers Link Claude or Repair link.
+- Link Claude backs up Claude Code's settings, adds LOUPE's hooks without touching your other hooks, and sends a test event so "linked" means it really works. First run asks once.
+- Mac: the hooks use node's full path, so they work when the Claude app is opened from the Dock.
 - Releases stay hidden until they are signed, so an install never sees an update it would have to refuse.
 
 ## 0.3.4 (2026-11-25)

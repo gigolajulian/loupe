@@ -15,7 +15,12 @@ const RELAY = path.join(os.homedir(), '.loupe', 'relay.js');
 const W = 760, H = 460;
 const sessions = new Map();
 const pending = new Map(); // req -> { sock, ev }: hooks waiting for an answer
-let seq = 0, lastEvent = 0;
+let seq = 0, lastEvent = 0, lastName = '';
+// Link Claude's test event: its session id, and the callback waiting for it on the pipe
+const TEST = 'loupe-link-test';
+let linkProof = null;
+let menu = () => {}; // the tray menu, set once the tray exists
+const SETTINGS = path.join(os.homedir(), '.claude', 'settings.json');
 // Claude's own window is in front: Claude owns every prompt. New ones go straight to the thread, and ones LOUPE holds
 // go back to it the moment Claude comes to front, so a question never waits on both sides (#14).
 let claudeFront = false;
@@ -172,7 +177,7 @@ function listen() {
     pipe.lines(sock, line => {
       let ev;
       try { ev = JSON.parse(line); } catch { return; }
-      lastEvent = Date.now();
+      if (ev.session_id === TEST) { if (!linkProof) return; linkProof(); }
       // away, or Claude in front: straight to the thread, mirrored
       // LOUPE_HOLD=1 (dev): hold anyway, to test the card while Claude is in front
       if (ev.orb_wait && !process.env.LOUPE_HOLD && (away() || claudeFront)) { ev.orb_wait = false; sock.end('null\n'); }
@@ -195,6 +200,12 @@ function listen() {
         if (process.env.LOUPE_SNAP) console.log('session pid', s.name, ev.orb_ppid, '->', s.pid);
       }
       if (s && ev.transcript_path && (s.title === undefined || ev.hook_event_name === 'UserPromptSubmit')) readTitle(s, ev.transcript_path);
+      if (ev.session_id !== TEST) {
+        lastEvent = Date.now(); lastName = s ? s.title || s.name : lastName;
+        // the tray line shows the time to the minute and the session: rebuild only when that changes
+        const k = `${hhmm(lastEvent)} ${lastName}`;
+        if (k !== linkKey) { linkKey = k; menu(); }
+      }
       push();
     });
     sock.on('error', () => {});
@@ -208,19 +219,102 @@ function listen() {
 
 // tray "Check Claude Code hooks": node, the 10 relay hooks, leftovers, last event. Fix backs up settings.json first.
 // onlyIfBad: the launch check, which stays quiet when everything is set
+// the node the hooks run. Windows: `node` on PATH. Mac: an app opened from the Dock has a bare PATH, so the login
+// shell's absolute node goes into the hook command. { path, version }, empty when not found.
+let nodeInfo = { path: '', version: '' };
+function findNode() {
+  try {
+    const out = (MAC ? require('child_process').execFileSync('/bin/zsh', ['-lc', 'command -v node && node -v'], { encoding: 'utf8', timeout: 5000 })
+      : require('child_process').execFileSync('node', ['-v'], { encoding: 'utf8', timeout: 5000, windowsHide: true })).trim().split(/\r?\n/);
+    const version = out.at(-1), at = out.at(-2) || '';
+    if (!/^v\d/.test(version)) throw new Error('no node');
+    nodeInfo = { path: MAC && path.isAbsolute(at) ? at : 'node', version };
+  } catch { nodeInfo = { path: '', version: '' }; }
+  return nodeInfo;
+}
+function readSettings() {
+  try { return { settings: JSON.parse(fs.readFileSync(SETTINGS, 'utf8')), bad: '' }; }
+  catch (e) { return { settings: {}, bad: e.code === 'ENOENT' ? '' : e.message }; }
+}
+// none: no LOUPE hooks. broken: some are wrong, or settings.json or the relay. node: no node. waiting: all set,
+// nothing arrived since launch. ok: events arrive. problem: the one line the island shows.
+function linkState() {
+  const { settings, bad } = readSettings(), r = hooks.check(settings, RELAY);
+  const wrong = r.events.find(e => !e.ok);
+  const problem = bad ? "settings.json can't be read." : !fs.existsSync(RELAY) ? 'relay.js is missing.'
+    : wrong ? `${wrong.name} ${wrong.count > 1 ? 'is there twice' : wrong.count ? 'has the wrong timeout' : 'is missing'}.` : r.stale.length ? 'An old LOUPE hook is still there.'
+    : r.coucou.length ? 'Coucou hooks are still there.' : '';
+  const state = !nodeInfo.version ? 'node' : problem ? (bad || r.events.some(e => e.count) || r.stale.length ? 'broken' : 'none')
+    : lastEvent ? 'ok' : 'waiting';
+  return { state, problem };
+}
+const BAD = ['none', 'broken', 'node'];
+const hhmm = t => new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+let linkKey = '';
+function linkLine(state) {
+  return { none: 'Claude not linked', broken: 'Claude link needs repair', node: 'Node.js not found',
+    waiting: 'Linked · waiting for a session', ok: `Linked · ${hhmm(lastEvent)}${lastName ? `, ${lastName}` : ''}` }[state];
+}
+
+// Link Claude / Repair link: today's Fix (backup, only LOUPE and Coucou hooks swapped, atomic write), then one test
+// event through node and the relay, so "Linked" means an event really arrived (the relay fails open).
+function writeFix(settings) {
+  fs.mkdirSync(path.dirname(SETTINGS), { recursive: true });
+  if (fs.existsSync(SETTINGS)) fs.copyFileSync(SETTINGS, `${SETTINGS}.bak-loupe-${new Date().toISOString().replace(/[:.]/g, '-')}`);
+  store.prune(path.dirname(SETTINGS), 'settings.json.bak-loupe-', 3);
+  if (!store.save(SETTINGS, JSON.stringify(hooks.fix(settings, RELAY, MAC && nodeInfo.path ? nodeInfo.path : 'node'), null, 2) + '\n')) throw new Error(`can't write ${SETTINGS}`);
+}
+const getNode = () => shell.openExternal('https://nodejs.org/');
+function testEvent() {
+  return new Promise(res => {
+    const t = setTimeout(() => { linkProof = null; res(false); }, 3000);
+    linkProof = () => { clearTimeout(t); linkProof = null; res(true); };
+    try {
+      const p = require('child_process').spawn(nodeInfo.path || 'node', [RELAY], { windowsHide: true, stdio: ['pipe', 'ignore', 'ignore'] });
+      p.on('error', () => {});
+      p.stdin.on('error', () => {});
+      p.stdin.end(JSON.stringify({ hook_event_name: 'SessionStart', session_id: TEST, cwd: path.join(os.homedir(), 'LOUPE') }));
+    } catch {}
+  }).then(ok => {
+    // the test row shows "LOUPE ready" for a moment, then goes
+    if (ok) setTimeout(() => { apply(sessions, { hook_event_name: 'SessionEnd', session_id: TEST }); push(); }, 4000);
+    return ok;
+  });
+}
+let linking = false;
+async function link() {
+  if (linking) return;
+  linking = true;
+  try { await linkOnce(); } finally { linking = false; }
+}
+async function linkOnce() {
+  findNode();
+  if (!nodeInfo.version) {
+    menu();
+    const { response } = await dialog.showMessageBox({ type: 'warning', title: 'LOUPE', noLink: true, message: 'Node.js not found',
+      detail: "Claude runs LOUPE's hooks with node. Install Node.js, then Repair link in the tray.", buttons: ['Get Node.js', 'Close'], defaultId: 0, cancelId: 1 });
+    if (response === 0) getNode();
+    return;
+  }
+  const { settings, bad } = readSettings();
+  if (bad) return dialog.showMessageBox({ type: 'error', title: 'LOUPE', message: "settings.json can't be read", detail: `${SETTINGS}\n${bad}\n\nFix the file, then Repair link.` });
+  try { writeFix(settings); } catch (e) { return dialog.showMessageBox({ type: 'error', title: 'LOUPE', message: 'Link failed', detail: e.message }); }
+  const ok = await testEvent();
+  menu();
+  const { response } = await dialog.showMessageBox({ type: ok ? 'info' : 'warning', title: 'LOUPE', noLink: true,
+    message: ok ? 'Claude Code is linked' : 'Hooks are set, but nothing arrived',
+    detail: ok ? 'A test event reached LOUPE. New Claude sessions show on the island. Sessions that are already open show after you restart them.'
+      : `The test event did not reach LOUPE through ${nodeInfo.path} and ${RELAY.replace(/\\/g, '/')}. Link details has the full check.`,
+    buttons: ok ? ['OK'] : ['Link details', 'Close'], defaultId: 0, cancelId: ok ? 0 : 1 });
+  if (!ok && response === 0) hookCheck();
+}
+
 function hookCheck(autoFix, onlyIfBad) {
-  const file = path.join(os.homedir(), '.claude', 'settings.json');
-  let settings = {}, bad = '';
-  try { settings = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) { if (e.code !== 'ENOENT') bad = e.message; }
-  let node = '';
-  try { // Mac: a Finder-launched app has a bare PATH, a login shell sees what the hooks see
-    node = (MAC ? require('child_process').execFileSync('/bin/zsh', ['-lc', 'node -v'], { encoding: 'utf8', timeout: 5000 })
-      : require('child_process').execFileSync('node', ['-v'], { encoding: 'utf8', timeout: 5000, windowsHide: true })).trim();
-  } catch {}
-  const r = hooks.check(settings, RELAY);
-  const ago = lastEvent ? `${Math.round((Date.now() - lastEvent) / 1000)} s ago` : 'none since LOUPE started';
+  const node = findNode().version;
+  const { settings, bad } = readSettings(), r = hooks.check(settings, RELAY);
+  const ago = lastEvent ? `${Math.round((Date.now() - lastEvent) / 1000)} s ago${lastName ? `, ${lastName}` : ''}` : 'none since LOUPE started';
   const lines = [
-    `node: ${node || 'not found, install Node.js'}`,
+    `node: ${node ? `${node}${MAC ? ` (${nodeInfo.path})` : ''}` : 'not found, install Node.js'}`,
     `relay: ${RELAY.replace(/\\/g, '/')}${fs.existsSync(RELAY) ? '' : ' (missing)'}`,
     bad ? `settings.json can't be read: ${bad}` : '',
     '', ...r.events.map(e => `${e.ok ? 'ok' : e.count > 1 ? 'twice' : 'missing'}   ${e.name}`),
@@ -237,12 +331,8 @@ function hookCheck(autoFix, onlyIfBad) {
     buttons: fixable ? ['Fix hooks', 'Close'] : ['Close'], defaultId: 0, cancelId: fixable ? 1 : 0, noLink: true,
   })).then(({ response }) => {
     if (!fixable || response !== 0) return;
-    try {
-      fs.mkdirSync(path.dirname(file), { recursive: true });
-      if (fs.existsSync(file)) fs.copyFileSync(file, `${file}.bak-loupe-${new Date().toISOString().replace(/[:.]/g, '-')}`);
-      store.prune(path.dirname(file), 'settings.json.bak-loupe-', 3);
-      if (!store.save(file, JSON.stringify(hooks.fix(settings, RELAY), null, 2) + '\n')) throw new Error(`can't write ${file}`);
-    } catch (e) { return dialog.showMessageBox({ type: 'error', title: 'LOUPE', message: 'Fix failed', detail: e.message }); }
+    try { writeFix(settings); } catch (e) { return dialog.showMessageBox({ type: 'error', title: 'LOUPE', message: 'Fix failed', detail: e.message }); }
+    menu();
     hookCheck(); // show the result
   });
 }
@@ -403,7 +493,7 @@ app.whenReady().then(() => {
   if (MAC) trayImg.setTemplateImage(true);
   tray = new Tray(trayImg);
   tray.setToolTip('LOUPE');
-  if (!MAC) tray.on('click', () => tray.popUpContextMenu()); // left click opens the menu too
+  if (!MAC) tray.on('click', () => { menu(); tray.popUpContextMenu(); }); // left click opens the menu too, fresh
   // quick settings live in the tray menu, saved to userData/config.json
   const cfgPath = path.join(app.getPath('userData'), 'config.json');
   const cfg = store.load(cfgPath, { closeDelay: 5000, sound: true, volume: 0.7, goo: true });
@@ -415,8 +505,16 @@ app.whenReady().then(() => {
       buttons: [MAC ? 'Open at Login' : 'Start with Windows', 'Not now'],
     }).then(({ response }) => {
       app.setLoginItemSettings({ openAtLogin: response === 0 });
-      cfg.loginSet = true; saveCfg(); menu();
+      cfg.loginSet = true; saveCfg(); menu(); firstLink();
     });
+  }
+  // first run with no working link: ask once. After that the island and the tray show it until it is linked.
+  function firstLink() {
+    if (cfg.linkAsked || !BAD.includes(linkState().state)) return;
+    cfg.linkAsked = true; saveCfg();
+    dialog.showMessageBox({ title: 'LOUPE', noLink: true, defaultId: 0, cancelId: 1, message: 'Link Claude Code to LOUPE?',
+      detail: 'LOUPE adds 10 hooks to ~/.claude/settings.json so your sessions show on the island. It backs up the file first and leaves your other hooks alone.',
+      buttons: ['Link Claude', 'Not now'] }).then(({ response }) => response === 0 && link());
   }
   // where: 'top' = top of the main display, 'above' = bottom edge of the display stacked above it (falls back to 'top')
   const place = () => {
@@ -448,6 +546,7 @@ app.whenReady().then(() => {
   // Other on a question card: take the keyboard while typing, then give it back
   ipcMain.on('focus', (_, on) => { if (win.isDestroyed()) return; win.setFocusable(on); if (on) win.focus(); });
   win.webContents.on('did-finish-load', sendCfg);
+  win.webContents.on('did-finish-load', () => { sentLink = null; menu(); }); // a (re)loaded page needs the link state again
   // Mac: after sleep the panel can stop drawing while events still arrive. Reload it on wake, on unlock and if
   // its renderer dies; the sessions live here in main, so nothing is lost.
   if (MAC) {
@@ -461,7 +560,19 @@ app.whenReady().then(() => {
     powerMonitor.on('resume', () => reload('resume'));
     powerMonitor.on('unlock-screen', () => reload('unlock'));
   }
-  const menu = () => tray.setContextMenu(Menu.buildFromTemplate([
+  let sentLink = null;
+  menu = () => {
+    const L = linkState(), line = linkLine(L.state), bad = BAD.includes(L.state);
+    tray.setToolTip(`LOUPE · ${line}`);
+    // the island shows a bad link like a needs-you; sent only when it changed
+    const lk = JSON.stringify(bad ? L : null);
+    if (lk !== sentLink && !win.isDestroyed()) { sentLink = lk; win.webContents.send('link', bad ? L : null); }
+    tray.setContextMenu(Menu.buildFromTemplate([
+    { label: line, enabled: false },
+    ...(L.state === 'waiting' ? [{ label: 'New sessions show here. Restart open ones.', enabled: false }] : []),
+    ...(bad ? [{ label: L.state === 'none' ? 'Link Claude' : 'Repair link', click: () => link() }] : []),
+    { label: 'Link details', click: () => hookCheck() },
+    { type: 'separator' },
     ...(MAC ? [] : [{ label: 'Where', submenu: [['top', 'Top of main screen'], ['above', 'Bottom of the screen above']].map(([v, label]) => ({
       label, type: 'radio', checked: (cfg.where || 'top') === v,
       click: () => { cfg.where = v; saveCfg(); sendCfg(); menu(); },
@@ -496,11 +607,11 @@ app.whenReady().then(() => {
       shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility');
       say('Accessibility for LOUPE', 'If LOUPE is already on in the list, select it, remove it with −, then add it back with + from Applications. Each new build needs this once.');
     } }] : []),
-    { label: 'Check Claude Code hooks', click: () => hookCheck() },
     ready ? { label: `Restart to update to ${ready}`, click: () => install() }
       : { label: `Check for updates (${app.getVersion()})`, enabled: app.isPackaged, click: () => checkUpdates(true) },
     { label: 'Quit LOUPE', click: () => app.quit() },
   ]));
+  };
   // updates: GitHub releases (package.json build.publish). Windows downloads in the background, then asks before it
   // installs (#1): "Restart to update" in a prompt once a day per version, and in the tray. Nothing installs on quit:
   // LOUPE rarely quits on its own (Windows ends it at shutdown), which is how 0.2.14 sat on a downloaded 0.3.0 (#17).
@@ -549,7 +660,10 @@ app.whenReady().then(() => {
   } catch (e) { console.log('updater failed', e); }
   menu();
   // first run or broken hooks: show the check with its Fix button, so setup never fails silently
-  if (/--(fix|check)-hooks/.test(process.argv.join(' '))) hookArgs(process.argv); else hookCheck(false, true);
+  findNode(); menu();
+  if (/--(fix|check)-hooks/.test(process.argv.join(' '))) hookArgs(process.argv); else if (cfg.loginSet || !app.isPackaged) firstLink();
+  // the island's Link Claude / Repair link / Get Node.js
+  ipcMain.on('link', (_, a) => (a === 'node' ? getNode() : link()));
   // the island's own sound controls, and the Processes switch
   ipcMain.on('config', (_, p) => { const patch = ipc.cfgPatch(p); Object.assign(cfg, patch); saveCfg(); menu(); if ('procs' in patch) { sendCfg(); procsTick(); } });
 

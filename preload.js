@@ -15,5 +15,7 @@ contextBridge.exposeInMainWorld('loupe', {
   procs: () => ipcRenderer.send('procs'), // the panel opened: refresh soon
   kill: pids => ipcRenderer.invoke('kill', pids), // after the confirm; resolves with reap's result lines
   trim: () => webFrame.clearCache(), // all threads went quiet: hand Blink's caches back (MEM-2)
+  onLink: cb => ipcRenderer.on('link', (_, l) => cb(l)), // a bad Claude link { state, problem }, or null
+  link: a => ipcRenderer.send('link', a), // Link Claude / Repair link, or 'node' to open nodejs.org
   onMenubar: cb => ipcRenderer.on('menubar', (_, m) => cb(m)), // Mac: where app menus end and icons start
 });

@@ -8,6 +8,10 @@ const island = $('island'), sess = $('sess'), more = $('more'), verbEl = $('verb
 const orbs = [$('orb-s'), $('orb-l')]; // collapsed and open sizes, same state
 const rows = new Map();
 let hovered = false, last = [];
+// a bad Claude link (main.js linkState): { state, problem } or null. linkLater: Not now, until the state changes
+let linkBad = null, linkLater = false;
+const linkOn = () => !!linkBad && !linkLater;
+const LINKWORD = { none: 'Claude not linked', broken: 'Claude link needs repair', node: 'Node.js not found' };
 
 // Mac: main passes the notch size (pt) as ?notch=WxH; index.html's .notch rules shape the island around it
 const notch = new URLSearchParams(location.search).get('notch');
@@ -214,17 +218,17 @@ function render(list) {
   // the open list shows only active threads: working, thinking or waiting on you
   const act = list.filter(active), app = act.filter(s => s.desktop), termS = act.filter(s => !s.desktop), term = termS.length;
 
-  island.classList.toggle('empty', !list.length);
+  island.classList.toggle('empty', !list.length && !linkOn()); // not linked: stay visible, like a needs-you
   const head = top(list);
   island.classList.toggle('idle', !!head && (head.state === 'idle' || head.state === 'done')); // lighter glass
   const asking = list.filter(s => s.ask && !dismissed.has(askKey(s)));
   // Claude in front: you answer there, so the panel doesn't pop open. The orb still shows "needs you".
   if (!closing) setOpen(hovered || (!claudeFront && (asking.length > 0 || list.some(s => s.state === 'need' && !s.ask))));
 
-  const lk = look(head);
+  const lk = !head && linkOn() ? { anim: 'breathing', ink: 'cyan', still: true } : look(head);
   setLook(lk);
   say(projEl, head ? [head.name, step(head)].filter(Boolean).join(' › ') : '');
-  say(verbEl, head ? verb(head, notch ? 'ear' : 'pill') : '');
+  say(verbEl, head ? verb(head, notch ? 'ear' : 'pill') : linkOn() ? LINKWORD[linkBad.state] : '');
   verbEl.classList.toggle('need', lk.ink === 'cyan');
 
   const calm = !act.length;
@@ -236,7 +240,7 @@ function render(list) {
   const ready = list.filter(s => s.state === 'ready' && s.desktop), recent = list.filter(s => !active(s) && s.state !== 'ready' && s.desktop).slice(0, 4);
   sync([...app.slice(0, 8).sort((a, b) => a.t0 - b.t0), ...ready, ...termS, ...recent]); // rows keep their place: by start, not by latest event
   const need = act.filter(s => s.state === 'need').length, n = app.length;
-  $('hd').innerHTML = calm ? 'nothing running' : `<b>${n} active</b>${need ? ` · ${need} need${need === 1 ? 's' : ''} you` : ''}${ready.length ? ` · ${ready.length} ready` : ''}`;
+  $('hd').innerHTML = calm ? (linkOn() ? LINKWORD[linkBad.state].toLowerCase() : 'nothing running') : `<b>${n} active</b>${need ? ` · ${need} need${need === 1 ? 's' : ''} you` : ''}${ready.length ? ` · ${ready.length} ready` : ''}`;
   more.textContent = term ? `${sess.classList.contains('showterm') ? '−' : '+'}${term} terminal` : '';
 
   island.classList.toggle('asking', asking.length > 0);
@@ -502,7 +506,7 @@ if (!notch) island.addEventListener('pointerdown', e => {
 // the cursor leaves and comes back, since mouseenter only fires again then. A card waiting for an answer keeps it open.
 island.addEventListener('click', e => {
   if (dragged) { dragged = false; return; } // the end of a drag, not a click
-  if (!island.classList.contains('open') || e.target.closest('button, input, #card, #more, #procs, #upd') ||
+  if (!island.classList.contains('open') || e.target.closest('button, input, #card, #more, #procs, #upd, #link') ||
     muteEl.parentElement.contains(e.target)) return;
   if (last.some(s => s.ask && !dismissed.has(askKey(s)))) return;
   clearTimeout(closing); closing = null; hovered = false;
@@ -606,7 +610,7 @@ function renderProcs() {
   const gs = on ? procGroups() : [], sg = suggested(gs);
   const all = gs.flatMap(g => g.rows), mb = all.reduce((a, r) => a + r.MemMB, 0);
   chipEl.textContent = on && sg.length ? `${sg.length} to kill` : '';
-  island.classList.toggle('empty', !last.length && !chipEl.textContent); // no threads but leftovers: stay visible
+  island.classList.toggle('empty', !last.length && !chipEl.textContent && !linkOn()); // no threads but leftovers: stay visible
   island.classList.toggle('hasprocs', on && !!procs);
   procrow.innerHTML = `Processes<span></span>${all.length} · ${mb} MB${sg.length ? ` · ${sg.length} to kill` : ''}`;
   island.classList.toggle('procsview', on && pview);
@@ -675,3 +679,23 @@ procsEl.addEventListener('click', async e => {
   else if (t.dataset.open) t.closest('.p').classList.toggle('open');
   if (!t.dataset.open) renderProcs();
 });
+// --- the Claude link (main.js linkState): Link Claude, Repair link or Get Node.js in the open panel
+const linkEl = $('link');
+function drawLink() {
+  island.classList.toggle('linkbad', linkOn());
+  if (!linkOn()) return linkEl.replaceChildren();
+  const st = linkBad.state, t = {
+    none: ['Link Claude Code to LOUPE', 'Adds 10 hooks to Claude Code so your sessions show here. Your other hooks stay, and settings.json is backed up first.', 'Link Claude'],
+    broken: ['Claude link needs repair', `${linkBad.problem} Link details in the tray has the full list.`, 'Repair link'],
+    node: ['Node.js not found', "Claude runs LOUPE's hooks with node. Install it, then repair the link.", 'Get Node.js'],
+  }[st];
+  linkEl.innerHTML = `<div class="tile"><div class="q">${esc(t[0])}</div><p>${esc(t[1])}</p><div class="btns">` +
+    (st === 'node' ? '<button class="btn" data-a="link">Repair link</button>' : '<button class="btn" data-a="later">Not now</button>') +
+    `<button class="btn pri" data-a="${st === 'node' ? 'node' : 'link'}">${esc(t[2])}</button></div></div>`;
+}
+linkEl.addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  if (b.dataset.a === 'later') { linkLater = true; drawLink(); render(last); } else window.loupe.link(b.dataset.a);
+});
+window.loupe.onLink(l => { if (JSON.stringify(l) !== JSON.stringify(linkBad)) linkLater = false; linkBad = l; drawLink(); render(last); });

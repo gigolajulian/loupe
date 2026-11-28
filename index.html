@@ -254,9 +254,12 @@
   .upd { display: none; }
   .island.showupd .upd { display: block; }
   .island.asking .upd, .island.procsview .upd { display: none; }
-  .upd .q { padding: 2px 6px 4px; }
-  .upd p { font-size: 12.5px; color: var(--dim); padding: 0 6px 6px; line-height: 1.45; }
-  .upd .btns { padding: 4px 2px 2px; }
+  .lnk { display: none; }
+  .island.linkbad .lnk { display: block; }
+  .island.asking .lnk, .island.procsview .lnk { display: none; }
+  .upd .q, .lnk .q { padding: 2px 6px 4px; }
+  .upd p, .lnk p { font-size: 12.5px; color: var(--dim); padding: 0 6px 6px; line-height: 1.45; }
+  .upd .btns, .lnk .btns { padding: 4px 2px 2px; }
 </style>
 </head>
 <body>
@@ -281,6 +284,7 @@
     <div class="vol"><button class="mute" id="mute" aria-label="Volume"><svg class="i"><use href="#vol"/></svg></button><input type="range" id="volume" min="0" max="1" step="0.05" aria-label="Volume"></div>
     <div class="hd" id="hd"></div>
     <div class="upd" id="upd"></div>
+    <div class="lnk" id="link"></div>
     <div class="sess" id="sess"><div class="more" id="more"></div></div>
     <button class="procrow" id="procrow"></button>
     <div class="procs" id="procs"></div>
