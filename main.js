@@ -535,6 +535,37 @@ app.whenReady().then(() => {
     win.webContents.send('config', { ...cfg, dock: place(), procsOk: !MAC });
   };
   const saveCfg = () => store.save(cfgPath, cfg);
+  // Hush add-on (Windows): off until ticked in the tray (hush.js). LOUPE owns its startup, so it rides on LOUPE's own.
+  const hush = MAC ? null : require('./hush').create({ dir: path.join(app.getPath('userData'), 'hush'),
+    onChange: () => menu(), log: m => crash('hush', m) });
+  if (hush && cfg.hush) hush.enable();
+  let hushStopped = false; // quit waits for Hush to give back any mute it holds
+  if (hush) app.on('before-quit', e => {
+    if (hushStopped || hush.state().phase !== 'running') return;
+    e.preventDefault(); hushStopped = true; hush.stop().then(() => app.quit());
+  });
+  let keysWin = null;
+  const hushKeys = () => {
+    if (keysWin && !keysWin.isDestroyed()) return keysWin.focus();
+    keysWin = new BrowserWindow({ width: 440, height: 480, resizable: false, minimizable: false, maximizable: false,
+      autoHideMenuBar: true, backgroundColor: '#101114', title: 'Discord keys for Hush', icon: path.join(__dirname, 'icon.png'),
+      webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
+    lockDown(keysWin);
+    keysWin.loadFile(path.join(__dirname, 'hush-keys.html'));
+  };
+  // the same user env vars Hush's install.ps1 writes; values go in on stdin, never on a command line
+  ipcMain.handle('hush-keys', (_, k) => {
+    if (!k) return shell.openExternal('https://discord.com/developers/applications'), '';
+    const id = String(k.id || ''), secret = String(k.secret || '');
+    if (!/^\d{15,22}$/.test(id)) return 'The Client ID is a long number, from the OAuth2 page.';
+    if (!/^[\w-]{16,64}$/.test(secret)) return 'That secret does not look right. Reset Secret and copy it again.';
+    return new Promise(res => {
+      const p = require('child_process').execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
+        "$id,$s = @($input); [Environment]::SetEnvironmentVariable('DISCORD_CLIENT_ID',$id,'User'); [Environment]::SetEnvironmentVariable('DISCORD_CLIENT_SECRET',$s,'User')"],
+        { windowsHide: true, timeout: 20e3 }, e => res(e ? 'Could not save the keys. Try again.' : ''));
+      p.stdin.end(`${id}\n${secret}\n`);
+    });
+  });
   // Windows: drag the island sideways along its edge (#10). dx is the cursor travel since the press.
   let dragFrom = 0;
   ipcMain.on('drag', (_, { phase, dx }) => {
@@ -560,6 +591,25 @@ app.whenReady().then(() => {
     powerMonitor.on('resume', () => reload('resume'));
     powerMonitor.on('unlock-screen', () => reload('unlock'));
   }
+  // the Hush rows: one checkbox, then a line or submenu for its state (hush.js)
+  const hushRows = () => {
+    if (!hush) return [];
+    const h = hush.state(), on = !!cfg.hush, dim = label => ({ label, enabled: false });
+    const rows = [{ label: on ? 'Hush: mute Discord while you dictate' : 'Add Hush: mute Discord while you dictate', type: 'checkbox', checked: on,
+      click: () => { cfg.hush = !on; saveCfg(); (on ? hush.disable() : hush.enable()); menu(); } }];
+    if (on && h.phase === 'installing') rows.push(dim('Hush: installing'));
+    if (on && h.phase === 'standalone') rows.push(dim('Hush: your Hush app is running it'), dim('Settings are in its own tray icon'));
+    if (on && h.phase === 'failed') rows.push(dim(h.note), ...(h.version ? [] : [{ label: 'Try again', click: () => hush.enable() }]));
+    if (on && h.phase === 'running' && h.keys === false) rows.push(dim('Hush needs your Discord app keys'), { label: 'Set up Discord keys…', click: hushKeys });
+    else if (on && h.phase === 'running') rows.push(...(h.note ? [dim(h.note)] : []), { label: `Hush: ${h.status}`, submenu: [
+      { label: 'Pause', type: 'checkbox', checked: !!h.paused, click: () => hush.send(h.paused ? 'resume' : 'pause') },
+      { label: 'Quiet mute (no Discord sound)', type: 'checkbox', checked: !!h.quiet, click: () => hush.send(h.quiet ? 'quiet off' : 'quiet on') },
+      { type: 'separator' },
+      dim(`Hush ${h.version}`), dim('Starts with LOUPE'),
+      { label: 'Check for Hush updates', click: () => hush.update(true) },
+    ] });
+    return [...rows, { type: 'separator' }];
+  };
   let sentLink = null;
   menu = () => {
     const L = linkState(), line = linkLine(L.state), bad = BAD.includes(L.state);
@@ -573,6 +623,7 @@ app.whenReady().then(() => {
     ...(bad ? [{ label: L.state === 'none' ? 'Link Claude' : 'Repair link', click: () => link() }] : []),
     { label: 'Link details', click: () => hookCheck() },
     { type: 'separator' },
+    ...hushRows(),
     ...(MAC ? [] : [{ label: 'Where', submenu: [['top', 'Top of main screen'], ['above', 'Bottom of the screen above']].map(([v, label]) => ({
       label, type: 'radio', checked: (cfg.where || 'top') === v,
       click: () => { cfg.where = v; saveCfg(); sendCfg(); menu(); },

@@ -282,12 +282,14 @@ test('ABU-13: main, not the page, decides what the page may change or kill', () 
 });
 
 test('WEB-1: the page has a strict CSP and every window is sandboxed and locked to its page', () => {
-  const csp = src('index.html').match(/http-equiv="Content-Security-Policy" content="([^"]+)"/)[1];
-  assert.match(csp, /default-src 'self'/);
-  assert.ok(!/unsafe-eval/.test(csp) && !/script-src[^;]*unsafe-inline/.test(csp), csp);
+  for (const page of ['index.html', 'hush-keys.html']) {
+    const csp = src(page).match(/http-equiv="Content-Security-Policy" content="([^"]+)"/)[1];
+    assert.match(csp, /default-src 'self'/);
+    assert.ok(!/unsafe-eval/.test(csp) && !/script-src[^;]*unsafe-inline/.test(csp), csp);
+  }
   const main = src('main.js'), wins = main.match(/new BrowserWindow\(/g).length;
   assert.strictEqual(main.match(/contextIsolation: true, nodeIntegration: false, sandbox: true/g).length, wins);
-  assert.strictEqual(main.match(/lockDown\((win|glass)\);/g).length, wins);
+  assert.strictEqual(main.match(/lockDown\((win|glass|keysWin)\);/g).length, wins);
 });
 
 test('WEB-7: process and session text is escaped before it goes into the page as HTML', () => {

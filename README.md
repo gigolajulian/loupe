@@ -138,6 +138,13 @@ Claude sessions can leave dev servers, log tails and watchers running after you 
 - The engine is `reap/reap.ps1` (rules from [zclean](https://github.com/TheStack-ai/zclean), MIT). It re-checks each PID's start time and command before `taskkill /T`, kills at most 20 at a time, and logs to `~/.claude/reap.log`. Run it alone: `reap.ps1` lists, `-Kill <pids>`, `-Json`, `-SelfTest`.
 - While on, LOUPE runs it every 2 minutes and when the panel opens. Off, it never runs.
 
+## Hush (Windows)
+[Hush](https://github.com/loupedesk/hush) mutes you on Discord while you dictate to the Claude app. Tick **Add Hush** in LOUPE's tray and LOUPE runs it for you: no second tray icon. Off by default.
+- LOUPE downloads `Hush.exe` from Hush's releases into its own settings folder and runs it only if its `.sig` checks out against the release key. It updates it the same way, once a day, never while Hush holds a mute.
+- Hush's status, Pause and Quiet mute show in the tray. It starts and stops with LOUPE, so LOUPE's Start with Windows covers it.
+- If the Hush app is already running, LOUPE says so and leaves it in charge. Discord is never muted twice.
+- Hush needs a Discord app of your own (Discord allows voice control for nothing else). **Set up Discord keys…** opens a small window for its Client ID and secret and saves them as your user env vars, the same ones Hush's installer writes. Then accept Discord's Authorize popup once.
+
 ## Check it
 
 - The island sits at the top centre of the main display. Hover it to open the list.

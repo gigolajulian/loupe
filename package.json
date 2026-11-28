@@ -1,7 +1,7 @@
 {
   "name": "loupe",
   "productName": "LOUPE",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "private": true,
   "description": "Top-of-screen island for Claude Code sessions",
   "author": "Julian Gigola",
@@ -21,6 +21,9 @@
     "files": [
       "main.js",
       "update-signature.js",
+      "hush.js",
+      "hush-keys.html",
+      "hush-keys.js",
       "pipe.js",
       "store.js",
       "ipc.js",
