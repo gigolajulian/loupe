@@ -177,7 +177,7 @@ function listen() {
     pipe.lines(sock, line => {
       let ev;
       try { ev = JSON.parse(line); } catch { return; }
-      if (ev.session_id === TEST && linkProof) linkProof();
+      if (ev.session_id === TEST) { if (!linkProof) return; linkProof(); }
       // away, or Claude in front: straight to the thread, mirrored
       // LOUPE_HOLD=1 (dev): hold anyway, to test the card while Claude is in front
       if (ev.orb_wait && !process.env.LOUPE_HOLD && (away() || claudeFront)) { ev.orb_wait = false; sock.end('null\n'); }
@@ -226,7 +226,9 @@ function findNode() {
   try {
     const out = (MAC ? require('child_process').execFileSync('/bin/zsh', ['-lc', 'command -v node && node -v'], { encoding: 'utf8', timeout: 5000 })
       : require('child_process').execFileSync('node', ['-v'], { encoding: 'utf8', timeout: 5000, windowsHide: true })).trim().split(/\r?\n/);
-    nodeInfo = MAC ? { path: out[0], version: out.at(-1) } : { path: 'node', version: out[0] };
+    const version = out.at(-1), at = out.at(-2) || '';
+    if (!/^v\d/.test(version)) throw new Error('no node');
+    nodeInfo = { path: MAC && path.isAbsolute(at) ? at : 'node', version };
   } catch { nodeInfo = { path: '', version: '' }; }
   return nodeInfo;
 }
@@ -240,7 +242,7 @@ function linkState() {
   const { settings, bad } = readSettings(), r = hooks.check(settings, RELAY);
   const wrong = r.events.find(e => !e.ok);
   const problem = bad ? "settings.json can't be read." : !fs.existsSync(RELAY) ? 'relay.js is missing.'
-    : wrong ? `${wrong.name} is ${wrong.count > 1 ? 'there twice' : 'missing'}.` : r.stale.length ? 'An old LOUPE hook is still there.'
+    : wrong ? `${wrong.name} ${wrong.count > 1 ? 'is there twice' : wrong.count ? 'has the wrong timeout' : 'is missing'}.` : r.stale.length ? 'An old LOUPE hook is still there.'
     : r.coucou.length ? 'Coucou hooks are still there.' : '';
   const state = !nodeInfo.version ? 'node' : problem ? (bad || r.events.some(e => e.count) || r.stale.length ? 'broken' : 'none')
     : lastEvent ? 'ok' : 'waiting';
@@ -260,7 +262,7 @@ function writeFix(settings) {
   fs.mkdirSync(path.dirname(SETTINGS), { recursive: true });
   if (fs.existsSync(SETTINGS)) fs.copyFileSync(SETTINGS, `${SETTINGS}.bak-loupe-${new Date().toISOString().replace(/[:.]/g, '-')}`);
   store.prune(path.dirname(SETTINGS), 'settings.json.bak-loupe-', 3);
-  if (!store.save(SETTINGS, JSON.stringify(hooks.fix(settings, RELAY, MAC ? nodeInfo.path : 'node'), null, 2) + '\n')) throw new Error(`can't write ${SETTINGS}`);
+  if (!store.save(SETTINGS, JSON.stringify(hooks.fix(settings, RELAY, MAC && nodeInfo.path ? nodeInfo.path : 'node'), null, 2) + '\n')) throw new Error(`can't write ${SETTINGS}`);
 }
 const getNode = () => shell.openExternal('https://nodejs.org/');
 function testEvent() {
@@ -279,7 +281,13 @@ function testEvent() {
     return ok;
   });
 }
+let linking = false;
 async function link() {
+  if (linking) return;
+  linking = true;
+  try { await linkOnce(); } finally { linking = false; }
+}
+async function linkOnce() {
   findNode();
   if (!nodeInfo.version) {
     menu();

@@ -11,7 +11,7 @@ let hovered = false, last = [];
 // a bad Claude link (main.js linkState): { state, problem } or null. linkLater: Not now, until the state changes
 let linkBad = null, linkLater = false;
 const linkOn = () => !!linkBad && !linkLater;
-const LINKWORD = { none: 'Claude not linked', broken: 'Claude link broken', node: 'Node.js not found' };
+const LINKWORD = { none: 'Claude not linked', broken: 'Claude link needs repair', node: 'Node.js not found' };
 
 // Mac: main passes the notch size (pt) as ?notch=WxH; index.html's .notch rules shape the island around it
 const notch = new URLSearchParams(location.search).get('notch');
@@ -698,4 +698,4 @@ linkEl.addEventListener('click', e => {
   if (!b) return;
   if (b.dataset.a === 'later') { linkLater = true; drawLink(); render(last); } else window.loupe.link(b.dataset.a);
 });
-window.loupe.onLink(l => { linkBad = l; linkLater = false; drawLink(); render(last); });
+window.loupe.onLink(l => { if (JSON.stringify(l) !== JSON.stringify(linkBad)) linkLater = false; linkBad = l; drawLink(); render(last); });
