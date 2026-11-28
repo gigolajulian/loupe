@@ -17,5 +17,6 @@ contextBridge.exposeInMainWorld('loupe', {
   trim: () => webFrame.clearCache(), // all threads went quiet: hand Blink's caches back (MEM-2)
   onLink: cb => ipcRenderer.on('link', (_, l) => cb(l)), // a bad Claude link { state, problem }, or null
   link: a => ipcRenderer.send('link', a), // Link Claude / Repair link, or 'node' to open nodejs.org
+  hushKeys: keys => ipcRenderer.invoke('hush-keys', keys), // Hush keys window: save { id, secret }, or null opens Discord's page
   onMenubar: cb => ipcRenderer.on('menubar', (_, m) => cb(m)), // Mac: where app menus end and icons start
 });
