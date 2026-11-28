@@ -554,7 +554,8 @@ app.whenReady().then(() => {
     keysWin.loadFile(path.join(__dirname, 'hush-keys.html'));
   };
   // the same user env vars Hush's install.ps1 writes; values go in on stdin, never on a command line
-  ipcMain.handle('hush-keys', (_, k) => {
+  ipcMain.handle('hush-keys', (e, k) => {
+    if (!keysWin || keysWin.isDestroyed() || e.sender !== keysWin.webContents) return 'Not allowed';
     if (!k) return shell.openExternal('https://discord.com/developers/applications'), '';
     const id = String(k.id || ''), secret = String(k.secret || '');
     if (!/^\d{15,22}$/.test(id)) return 'The Client ID is a long number, from the OAuth2 page.';
@@ -591,6 +592,7 @@ app.whenReady().then(() => {
     powerMonitor.on('resume', () => reload('resume'));
     powerMonitor.on('unlock-screen', () => reload('unlock'));
   }
+  const HUSH_SAYS = ['connected to Discord', 'muting Discord', 'Discord not running', 'paused', 'starting']; // else Hush's raw error text
   // the Hush rows: one checkbox, then a line or submenu for its state (hush.js)
   const hushRows = () => {
     if (!hush) return [];
@@ -601,7 +603,7 @@ app.whenReady().then(() => {
     if (on && h.phase === 'standalone') rows.push(dim('Hush: your Hush app is running it'), dim('Settings are in its own tray icon'));
     if (on && h.phase === 'failed') rows.push(dim(h.note), ...(h.version ? [] : [{ label: 'Try again', click: () => hush.enable() }]));
     if (on && h.phase === 'running' && h.keys === false) rows.push(dim('Hush needs your Discord app keys'), { label: 'Set up Discord keys…', click: hushKeys });
-    else if (on && h.phase === 'running') rows.push(...(h.note ? [dim(h.note)] : []), { label: `Hush: ${h.status}`, submenu: [
+    else if (on && h.phase === 'running') rows.push(...(h.note ? [dim(h.note)] : []), { label: `Hush: ${HUSH_SAYS.includes(h.status) ? h.status : 'cannot reach Discord'}`, submenu: [
       { label: 'Pause', type: 'checkbox', checked: !!h.paused, click: () => hush.send(h.paused ? 'resume' : 'pause') },
       { label: 'Quiet mute (no Discord sound)', type: 'checkbox', checked: !!h.quiet, click: () => hush.send(h.quiet ? 'quiet off' : 'quiet on') },
       { type: 'separator' },

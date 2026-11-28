@@ -62,7 +62,8 @@ function create({ dir, onChange, log = () => {}, get = httpGet }) {
     c.on('error', e => { log(`hush: ${e.message}`); if (child === c) child = null; });
     c.on('exit', code => {
       if (child === c) child = null;
-      if (!want) return;
+      st.holding = false; // a dead Hush holds nothing; Hush restores what it can at its next start
+      if (!want || c.stopped) return; // LOUPE asked it to stop (update, quit, off)
       // 3: the standalone Hush holds the lock. Anything else is a crash: start again, a minute later either way.
       set(code === 3 ? { phase: 'standalone' } : { phase: 'failed', note: 'Hush stopped, starting again' });
       clearTimeout(retry); retry = setTimeout(start, RETRY);
@@ -73,7 +74,8 @@ function create({ dir, onChange, log = () => {}, get = httpGet }) {
   const stop = () => new Promise(res => {
     const c = child; child = null;
     if (!c || c.exitCode !== null) return res();
-    const t = setTimeout(() => { c.kill(); res(); }, 4000);
+    c.stopped = true;
+    const t = setTimeout(() => { c.kill(); res(); }, 8000); // Hush waits up to 5 s for Discord to take the unmute
     c.once('exit', () => { clearTimeout(t); res(); });
     try { c.stdin.end('quit\n'); } catch { c.kill(); }
   });
@@ -87,9 +89,9 @@ function create({ dir, onChange, log = () => {}, get = httpGet }) {
       if (have()) set({ note: `Downloading Hush ${rel.v}` });
       fs.mkdirSync(dir, { recursive: true });
       await fetchSigned(rel, exe + '.new', get);
-      while (want && st.holding) await new Promise(r => setTimeout(r, 1000));
+      while (want && child && st.holding) await new Promise(r => setTimeout(r, 1000));
       await stop();
-      fs.rmSync(exe, { force: true }); fs.renameSync(exe + '.new', exe); fs.writeFileSync(verFile, rel.v);
+      fs.renameSync(exe + '.new', exe); fs.writeFileSync(verFile, rel.v); // replaces in place, so a locked file keeps the old exe
       set({ version: rel.v, note: '' });
       log(`hush: updated to ${rel.v}`);
     } catch (e) {
@@ -105,11 +107,12 @@ function create({ dir, onChange, log = () => {}, get = httpGet }) {
     const had = have();
     if (!had) {
       set({ phase: 'installing', note: '' });
-      try { await update(false); } catch (e) { want = false; return set({ phase: 'failed', note: `Hush could not be installed: ${e.message}` }); }
+      try { await update(false); } catch (e) { want = false; return set({ phase: 'failed', note: /not signed/.test(e.message) ? 'Hush could not be installed: not signed' : 'Hush could not be installed' }); }
+      if (!want) return; // unticked while it downloaded
     }
     start();
-    clearInterval(daily); daily = setInterval(() => update(false), DAY);
-    if (had) update(false);
+    clearInterval(daily); daily = setInterval(() => update(false).catch(() => {}), DAY);
+    if (had) update(false).catch(() => {});
   }
 
   async function disable() {
