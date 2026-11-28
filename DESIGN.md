@@ -39,4 +39,5 @@ One line each, checked on every mock and build:
 - Check Windows and the Mac notch.
 - Kill and other destructive buttons use `--danger`, never cyan; each kill asks once in place (no dialog).
 - Processes rows are one line (28 to 32 px, mouse only, Julian asked for a compact panel 2026-11-21); keep lists to one line per item and open details on click.
+- A bad Claude link (not linked, needs repair, no node) shows on the island like a needs-you: cyan words, still orb, stays visible. A working link shows only in the tray's first line (2026-11-28).
 - Nothing animates or polls while idle unless it shows: state is sent only when it changes, background checks only while their feature is on.

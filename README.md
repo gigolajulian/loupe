@@ -64,7 +64,7 @@ Install or upgrade LOUPE on this Windows PC. LOUPE is a small always-on-top isla
 2. What is there now: if `$env:LOCALAPPDATA\Programs\LOUPE\LOUPE.exe` exists, note its version with `(Get-Item <path>).VersionInfo.ProductVersion`. Note every hook command in `~/.claude/settings.json` that mentions relay.js, loupe or coucou. If the installed version already matches the latest release, skip to step 5.
 3. Download the latest installer into a new empty folder: `$d = New-Item -ItemType Directory -Force "$env:TEMP\loupe-install"`. Get the asset URL from `Invoke-RestMethod https://api.github.com/repos/loupedesk/loupe/releases/latest` (the asset named `LOUPE-Setup-<version>.exe`), download it with `Invoke-WebRequest -OutFile`, then `Unblock-File` it.
 4. Install. This upgrades an older LOUPE in place and keeps its settings: `Stop-Process -Name LOUPE -ErrorAction SilentlyContinue`, then `Start-Process -Wait <installer> -ArgumentList '/S'`. It installs per user (no admin) to `%LOCALAPPDATA%\Programs\LOUPE` and starts LOUPE. If LOUPE is not running 5 seconds later, start `LOUPE.exe`.
-5. Hooks: run `& "$env:LOCALAPPDATA\Programs\LOUPE\LOUPE.exe" --check-hooks`. If the dialog says the hooks need a look, tell me to click "Fix hooks" in it myself (Claude Code's safety check won't let you edit its own settings), and wait for me. LOUPE backs up `~/.claude/settings.json` to `settings.json.bak-loupe-<time>`, removes old LOUPE hooks (any old relay.js path) and Coucou hooks, and adds the 10 LOUPE hooks pointing at `~/.loupe/relay.js`, which LOUPE rewrites on every launch. Other hooks stay. The next dialog says "Claude Code hooks are set". Show me the hook part of the diff against the backup. Leave any old relay.js file on disk where it is.
+5. Hooks: run `& "$env:LOCALAPPDATA\Programs\LOUPE\LOUPE.exe" --check-hooks`. If the dialog says the hooks need a look, tell me to click "Fix hooks" in it myself, or Link Claude in the tray (Claude Code's safety check won't let you edit its own settings), and wait for me. LOUPE backs up `~/.claude/settings.json` to `settings.json.bak-loupe-<time>`, removes old LOUPE hooks (any old relay.js path) and Coucou hooks, and adds the 10 LOUPE hooks pointing at `~/.loupe/relay.js`, which LOUPE rewrites on every launch. Other hooks stay. The next dialog says "Claude Code hooks are set". Show me the hook part of the diff against the backup. Leave any old relay.js file on disk where it is.
 6. Test: `'{"hook_event_name":"UserPromptSubmit","session_id":"loupe-test","cwd":"C:/LOUPE TEST"}' | node "$HOME/.loupe/relay.js"` makes "LOUPE TEST" show "thinking" at the top centre of the main display. It clears itself after 10 seconds.
 7. Report the version before and after, what changed in the hooks, and that new Claude Code sessions now show on LOUPE (running sessions show up on their next event). The tray icon (three dots) has "Check for updates", "Check Claude Code hooks" and the settings.
 ```
@@ -78,7 +78,7 @@ Install or upgrade LOUPE on this Mac. LOUPE is a small island in the notch that 
 2. What is there now: if /Applications/LOUPE.app exists, note its version (`defaults read /Applications/LOUPE.app/Contents/Info CFBundleShortVersionString`). Note every hook command in ~/.claude/settings.json that mentions relay.js, loupe or coucou.
 3. Source: clone https://github.com/loupedesk/loupe to ~/LOUPE-src, or `git -C ~/LOUPE-src pull` if it is already there. Then run `npm install` and `npx electron-builder --mac` in it. The build is unsigned on purpose, so a signing skip warning is fine.
 4. Install: `pkill -x LOUPE`, then copy the app for this Mac (`uname -m`: arm64 is dist/mac-arm64/LOUPE.app, x86_64 is dist/mac/LOUPE.app) over /Applications/LOUPE.app with `ditto`. Settings live in ~/Library/Application Support/LOUPE and stay. Ad-hoc sign it: `codesign --force --deep --sign - /Applications/LOUPE.app`, clear quarantine: `xattr -dr com.apple.quarantine /Applications/LOUPE.app`, then `open /Applications/LOUPE.app`. No Dock icon is expected.
-5. Hooks: `/Applications/LOUPE.app/Contents/MacOS/LOUPE --check-hooks`. If the dialog says the hooks need a look, tell me to click "Fix hooks" in it myself (Claude Code's safety check won't let you edit its own settings), and wait for me. It backs up ~/.claude/settings.json, swaps old LOUPE and Coucou hooks for the 10 LOUPE hooks at ~/.loupe/relay.js, and leaves other hooks alone. Show me the hook part of the diff against the backup. If the dialog says node is not found, find it with `command -v node` and ask me before putting that absolute path in the hook commands.
+5. Hooks: `/Applications/LOUPE.app/Contents/MacOS/LOUPE --check-hooks`. If the dialog says the hooks need a look, tell me to click "Fix hooks" in it myself (or Link Claude in the menu bar icon) (Claude Code's safety check won't let you edit its own settings), and wait for me. It backs up ~/.claude/settings.json, swaps old LOUPE and Coucou hooks for the 10 LOUPE hooks at ~/.loupe/relay.js, and leaves other hooks alone. Show me the hook part of the diff against the backup. Fix writes node's full path from my login shell into the hook commands. If the dialog says node is not found, ask me before `brew install node`, then run the check again.
 6. Test: `echo '{"hook_event_name":"UserPromptSubmit","session_id":"loupe-test","cwd":"/tmp/LOUPE TEST"}' | node ~/.loupe/relay.js` grows the notch with "LOUPE TEST thinking". Take a screenshot of the top of the screen and show me. It clears itself after 10 seconds.
 7. Report the version before and after and what changed in the hooks. Updates: the Mac build is unsigned, so macOS won't let it update itself. When a new release is out, LOUPE shows "LOUPE x is out", and running this prompt again upgrades it.
 ```
@@ -86,7 +86,7 @@ Install or upgrade LOUPE on this Mac. LOUPE is a small island in the notch that 
 ### By hand (Windows)
 
 1. Download `LOUPE-Setup-<version>.exe` from [the latest release](https://github.com/loupedesk/loupe/releases/latest) and run it. It is unsigned: SmartScreen shows "More info", then "Run anyway".
-2. Tray icon (three dots), then "Check Claude Code hooks", then "Fix hooks".
+2. On first run LOUPE asks "Link Claude Code to LOUPE?". Click Link Claude. Later: the island shows "Claude not linked" until it is linked, and the tray has Link Claude.
 
 ## Updates
 
@@ -96,9 +96,15 @@ Windows installs from 0.2.12 on update themselves: LOUPE checks this repo's rele
 
 Claude Code talks to LOUPE through `relay.js`, which forwards each hook event over a named pipe (a Unix socket on the Mac). LOUPE writes its own copy to `~/.loupe/relay.js` on every launch, so updates reach it. If LOUPE is closed, the relay exits at once and Claude Code works as usual.
 
-On launch, if any of the 10 hooks is missing, LOUPE opens the hook check with its Fix button.
+The first line of the tray menu says whether Claude Code is linked:
 
-Tray "Check Claude Code hooks" (or `LOUPE --check-hooks`) shows whether `node` runs, whether each hook points at `~/.loupe/relay.js`, leftover Coucou or old-path hooks, and when the last event came in. "Fix hooks" (or `LOUPE --fix-hooks`, no dialog first) writes these after a backup:
+- **Linked · 2:14 AM, JG WEBSITE NEW**: the time and session of the last hook event.
+- **Linked · waiting for a session**: the hooks are set, nothing has arrived since LOUPE started. Running sessions keep the hooks they started with, so restart them.
+- **Claude not linked**, **Claude link needs repair**, **Node.js not found**: the island stays visible with the same words in cyan, and opening it offers Link Claude, Repair link or Get Node.js. The tray has the same button. First run asks once.
+
+Link Claude and Repair link back up `~/.claude/settings.json`, swap only LOUPE and Coucou hooks for the 10 LOUPE hooks, then send one test event through node and `~/.loupe/relay.js`. "Claude Code is linked" means that event reached LOUPE. On a Mac the hooks use node's full path from your login shell (`command -v node`), since the Claude app opened from the Dock may not have node on its PATH; plain `node` passes the check too.
+
+Tray "Link details" (or `LOUPE --check-hooks`) shows whether `node` runs, whether each hook points at `~/.loupe/relay.js`, leftover Coucou or old-path hooks, and when the last event came in. "Fix hooks" (or `LOUPE --fix-hooks`, no dialog first) writes these after a backup:
 
 ```json
 "hooks": {
@@ -137,7 +143,7 @@ Claude sessions can leave dev servers, log tails and watchers running after you 
 - The island sits at the top centre of the main display. Hover it to open the list.
 - Send a prompt in any session: its project shows "thinking", then what it's doing.
 - Speaker at the top right of the open panel: click for the volume slider, right click to mute.
-- Tray icon (three dots, left or right click): close delay, gooey motion, sounds, prompts on LOUPE, Start with Windows, hook check, updates, Quit.
+- Tray icon (three dots, left or right click): close delay, gooey motion, sounds, prompts on LOUPE, Start with Windows, link status, Link details, updates, Quit.
 
 ## How it reads sessions
 
