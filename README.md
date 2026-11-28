@@ -142,7 +142,7 @@ Claude sessions can leave dev servers, log tails and watchers running after you 
 [Hush](https://github.com/loupedesk/hush) mutes you on Discord while you dictate to the Claude app. Tick **Add Hush** in LOUPE's tray and LOUPE runs it for you: no second tray icon. Off by default. On, it is one tray row showing Hush's status, with Pause, Quiet mute, updates and Turn off Hush inside.
 - LOUPE downloads `Hush.exe` from Hush's releases into its own settings folder and runs it only if its `.sig` checks out against the release key. It updates it the same way, once a day, never while Hush holds a mute.
 - Hush's status, Pause and Quiet mute show in the tray. It starts and stops with LOUPE, so LOUPE's Start with Windows covers it.
-- If the Hush app is already running, LOUPE says so and leaves it in charge. Discord is never muted twice.
+- Both installed: LOUPE turns its Hush row on by itself the first time, and the Hush app (1.7.0 or later) steps aside within a few seconds, so there is one tray icon. It never hands over mid-dictation, and Discord is never muted twice. When LOUPE quits, the Hush app runs as usual the next time it starts. **Turn off Hush** in LOUPE's tray keeps it off.
 - Hush needs a Discord app of your own (Discord allows voice control for nothing else). **Set up Discord keys…** opens a small window for its Client ID and secret and saves them as your user env vars, the same ones Hush's installer writes. Then accept Discord's Authorize popup once.
 
 ## Check it
