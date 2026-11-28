@@ -73,8 +73,11 @@ const CHECKS = {
   // no trackers or third-party calls: the only remote host is this repo's GitHub releases
   'PRIV-1'() {
     for (const f of APP) {
-      for (const m of read(f).matchAll(/https?:\/\/[^\s'"`)<>]+/g)) {
-        if (!/^https:\/\/github\.com\/loupedesk\/loupe\//.test(m[0]) && !/^http:\/\/www\.w3\.org\//.test(m[0])) fail(`${f} calls ${m[0]}`);
+      // self-tests (after `require.main === module`) never run in the app, so their sample URLs don't count
+      const code = read(f).split(/if \(require\.main === module\)/)[0];
+      for (const m of code.matchAll(/https?:\/\/[^\s'"`)<>]+/g)) {
+        // nodejs.org: Get Node.js opens it in the browser, LOUPE itself sends nothing there
+        if (!/^https:\/\/github\.com\/loupedesk\/loupe\//.test(m[0]) && !/^http:\/\/www\.w3\.org\//.test(m[0]) && m[0] !== 'https://nodejs.org/') fail(`${f} calls ${m[0]}`);
       }
       if (/<script[^>]+src=["']?https?:/i.test(read(f))) fail(`${f} loads a remote script`);
     }
