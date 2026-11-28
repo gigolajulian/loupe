@@ -2,7 +2,7 @@
 
 One entry per release, in plain words. The version comes from package.json only.
 
-## 0.3.8 (unreleased)
+## 0.3.8 (2026-11-28)
 
 - With the Hush app installed too, LOUPE takes Hush in: its Hush row turns on by itself, and the Hush app (1.7.0 or later) closes its own tray icon within a few seconds. One tray icon covers both. Turn off Hush in the tray keeps it off.
 
