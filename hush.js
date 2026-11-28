@@ -1,7 +1,8 @@
 // Hush add-on (Windows): LOUPE runs Hush (loupedesk/hush) as `Hush.exe --headless`, so one tray icon covers both.
 // LOUPE fetches the release exe, checks its .sig against the release keys (Windows Hello, or the ed25519 recovery key), and
-// talks to it over stdio: JSON status lines out, commands in. Hush holds a per-login lock, so when the standalone
-// Hush app is running the sidecar exits with code 3 and LOUPE leaves it be (Discord is never muted twice).
+// talks to it over stdio: JSON status lines out, commands in. Hush holds a per-login lock, so Discord is never muted twice. While LOUPE runs Hush it writes flag ({"pid"}), and
+// the Hush app (1.7.0 and later) steps aside within 5 s, so one tray icon covers both. Until it has, LOUPE checks the
+// lock with held() (no process started) every 5 s.
 const { spawn } = require('child_process');
 const crypto = require('crypto');
 const fs = require('fs');
@@ -9,7 +10,7 @@ const path = require('path');
 const { signed, HELLO, RECOVERY } = require('./update-signature');
 
 const API = 'https://api.github.com/repos/loupedesk/hush/releases/latest';
-const DAY = 24 * 3600e3, RETRY = 60e3;
+const DAY = 24 * 3600e3, RETRY = 60e3, ASIDE = 5e3;
 const newer = (a, b) => { // 'x.y.z' strings: is a newer than b
   const x = a.split('.').map(Number), y = (b || '0').split('.').map(Number);
   for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0);
@@ -39,7 +40,7 @@ const httpGet = async url => {
   return Buffer.from(await r.arrayBuffer());
 };
 
-function create({ dir, onChange, log = () => {}, get = httpGet }) {
+function create({ dir, onChange, log = () => {}, get = httpGet, flag = null, held = () => false }) {
   const exe = path.join(dir, 'Hush.exe'), verFile = path.join(dir, 'version.txt');
   const have = () => { try { return fs.existsSync(exe) && fs.readFileSync(verFile, 'utf8').trim(); } catch { return ''; } };
   // phase: off | installing | running | standalone | failed. The rest comes from Hush's own status line.
@@ -48,6 +49,7 @@ function create({ dir, onChange, log = () => {}, get = httpGet }) {
 
   function start() {
     if (child || !want || !fs.existsSync(exe)) return;
+    if (held()) { set({ phase: 'standalone' }); clearTimeout(retry); retry = setTimeout(start, ASIDE); return; } // the Hush app is handing over
     const c = child = spawn(exe, ['--headless'], { stdio: ['pipe', 'pipe', 'ignore'], windowsHide: true });
     let buf = '';
     c.stdout.on('data', d => {
@@ -66,7 +68,7 @@ function create({ dir, onChange, log = () => {}, get = httpGet }) {
       if (!want || c.stopped) return; // LOUPE asked it to stop (update, quit, off)
       // 3: the standalone Hush holds the lock. Anything else is a crash: start again, a minute later either way.
       set(code === 3 ? { phase: 'standalone' } : { phase: 'failed', note: 'Hush stopped, starting again' });
-      clearTimeout(retry); retry = setTimeout(start, RETRY);
+      clearTimeout(retry); retry = setTimeout(start, code === 3 ? ASIDE : RETRY);
     });
   }
 
@@ -102,12 +104,15 @@ function create({ dir, onChange, log = () => {}, get = httpGet }) {
     } finally { busy = false; start(); }
   }
 
+  // the flag tells the Hush app to step aside; gone (or its pid dead), the Hush app runs as usual
+  const own = on => { if (!flag) return; try { on ? (fs.mkdirSync(path.dirname(flag), { recursive: true }), fs.writeFileSync(flag, JSON.stringify({ pid: process.pid }))) : fs.rmSync(flag, { force: true }); } catch (e) { log(`hush flag: ${e.message}`); } };
+
   async function enable() {
-    want = true;
+    want = true; own(true);
     const had = have();
     if (!had) {
       set({ phase: 'installing', note: '' });
-      try { await update(false); } catch (e) { want = false; return set({ phase: 'failed', note: /not signed/.test(e.message) ? 'Hush could not be installed: not signed' : 'Hush could not be installed' }); }
+      try { await update(false); } catch (e) { want = false; own(false); return set({ phase: 'failed', note: /not signed/.test(e.message) ? 'Hush could not be installed: not signed' : 'Hush could not be installed' }); }
       if (!want) return; // unticked while it downloaded
     }
     start();
@@ -116,13 +121,15 @@ function create({ dir, onChange, log = () => {}, get = httpGet }) {
   }
 
   async function disable() {
-    want = false; clearTimeout(retry); clearInterval(daily);
+    want = false; own(false); clearTimeout(retry); clearInterval(daily);
     await stop();
     set({ phase: 'off', note: '' });
   }
 
   const send = cmd => { try { child && child.stdin.write(cmd + '\n'); } catch {} };
-  return { enable, disable, stop, send, update, state: () => st };
+  // LOUPE is quitting: let the Hush app run again next time it starts, then stop ours
+  const quit = () => { own(false); return stop(); };
+  return { enable, disable, stop, quit, send, update, state: () => st };
 }
 
 module.exports = { create, latest, fetchSigned, newer };

@@ -535,14 +535,27 @@ app.whenReady().then(() => {
     win.webContents.send('config', { ...cfg, dock: place(), procsOk: !MAC });
   };
   const saveCfg = () => store.save(cfgPath, cfg);
-  // Hush add-on (Windows): off until ticked in the tray (hush.js). LOUPE owns its startup, so it rides on LOUPE's own.
+  // Hush add-on (Windows, hush.js). LOUPE owns its startup, so it rides on LOUPE's own. hushHeld(): is Hush's per-login lock
+  // taken (the Hush app still running)? Asked through kernel32, so no process starts every 5 s.
+  let hushHeld = () => false;
+  if (!MAC) try {
+    const k32 = require('koffi').load('kernel32.dll');
+    const openMutex = k32.func('intptr_t __stdcall OpenMutexW(uint32 access, bool inherit, str16 name)');
+    const closeHandle = k32.func('bool __stdcall CloseHandle(intptr_t h)');
+    hushHeld = () => { const h = openMutex(0x00100000, false, 'Local\\Hush'); if (h) closeHandle(h); return !!h; }; // SYNCHRONIZE
+  } catch (e) { crash('hush lock check', e); }
   const hush = MAC ? null : require('./hush').create({ dir: path.join(app.getPath('userData'), 'hush'),
+    flag: path.join(process.env.LOCALAPPDATA || '', 'Hush', 'loupe.json'), held: hushHeld,
     onChange: () => menu(), log: m => crash('hush', m) });
+  // both installed: LOUPE takes Hush in once, so there is one tray icon. Turn off Hush in the tray keeps it off.
+  if (hush && !('hush' in cfg) && fs.existsSync(path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Hush', 'Hush.exe'))) { cfg.hush = true; saveCfg(); }
   if (hush && cfg.hush) hush.enable();
   let hushStopped = false; // quit waits for Hush to give back any mute it holds
   if (hush) app.on('before-quit', e => {
-    if (hushStopped || hush.state().phase !== 'running') return;
-    e.preventDefault(); hushStopped = true; hush.stop().then(() => app.quit());
+    if (hushStopped) return;
+    hushStopped = true;
+    if (hush.state().phase !== 'running') return void hush.quit();
+    e.preventDefault(); hush.quit().then(() => app.quit());
   });
   let keysWin = null;
   const hushKeys = () => {
@@ -602,7 +615,7 @@ app.whenReady().then(() => {
     const off = [{ type: 'separator' }, { label: 'Turn off Hush', click: () => { cfg.hush = false; saveCfg(); hush.disable(); menu(); } }];
     const row = (label, items) => [{ label: `Hush: ${label}`, submenu: [...items, ...off] }];
     if (h.phase === 'installing' || h.phase === 'off') return row(h.phase === 'off' ? 'starting' : 'installing', []);
-    if (h.phase === 'standalone') return row('your Hush app runs it', [dim('Its settings are in its own tray icon')]);
+    if (h.phase === 'standalone') return row('taking over from the Hush app', [dim('Your Hush app hands over within a few seconds. Before 1.7.0 it keeps running.')]);
     if (h.phase === 'failed') return row(h.version ? 'starting again' : 'could not be installed',
       [...(h.note ? [dim(h.note)] : []), ...(h.version ? [] : [{ label: 'Try again', click: () => hush.enable() }])]);
     if (h.keys === false) return row('needs Discord keys', [{ label: 'Set up Discord keys…', click: hushKeys }]);

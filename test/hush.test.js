@@ -32,3 +32,19 @@ test('fetchSigned writes only an exe signed for its version', async () => {
 test('newer compares versions as numbers', () => {
   assert.ok(newer('1.10.0', '1.9.9') && newer('1.6.0', '') && !newer('1.6.0', '1.6.0') && !newer('1.5.9', '1.6.0'));
 });
+
+test('LOUPE marks Hush as taken in, and waits on the Hush app without starting a copy', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hush-')), flag = path.join(dir, 'state', 'loupe.json');
+  fs.writeFileSync(path.join(dir, 'Hush.exe'), 'not run'); fs.writeFileSync(path.join(dir, 'version.txt'), '1.7.0');
+  const seen = [];
+  const h = require('../hush').create({ dir, flag, held: () => true, onChange: s => seen.push(s.phase),
+    get: async () => { throw new Error('offline'); } });
+  await h.enable();
+  assert.strictEqual(JSON.parse(fs.readFileSync(flag, 'utf8')).pid, process.pid);
+  assert.strictEqual(h.state().phase, 'standalone'); // the lock is held: no process started
+  await h.disable();
+  assert.ok(!fs.existsSync(flag) && h.state().phase === 'off');
+  await h.enable(); await h.quit();
+  assert.ok(!fs.existsSync(flag)); // quitting LOUPE lets the Hush app run again
+  await h.disable();
+});
